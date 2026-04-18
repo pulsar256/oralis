@@ -3,7 +3,7 @@
 <div class="panel">
   <div class="run-view-hdr">
     <a href="/projects/{{ project.slug }}" class="back-link">← {{ project.name }}</a>
-    <span>{{ run.settings.speaker }} — {{ run.settings.max_tokens }} txt-tok/chunk — cfg {{ run.settings.cfg_scale }}{% if run.settings.seed %} — seed {{ run.settings.seed }}{% endif %}</span>
+    <span>{{ run.settings.speaker }} — {{ run.settings.max_tokens }} txt-tok/chunk — cfg {{ run.settings.cfg_scale }} — {{ 'seed ' ~ run.settings.seed if run.settings.seed is not none and run.settings.seed != '' else 'random' }}</span>
     <span class="{{ 'done' if run.status.state == 'done' else 'stopped' if run.status.state == 'stopped' else '' }}">
       {{ '✓' if run.status.state == 'done' else '⏸' if run.status.state == 'stopped' else '✕' }} {{ run.status.state }}
     </span>
