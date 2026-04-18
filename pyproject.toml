@@ -13,7 +13,6 @@ classifiers = [
   "Operating System :: OS Independent",
 ]
 dependencies = [
-  "torch==2.9.1+rocm6.4",
   "transformers>=4.51.3,<5.0.0",
   "accelerate",
   "llvmlite>=0.40.0",
@@ -31,6 +30,13 @@ dependencies = [
 
 [project.optional-dependencies]
 streamingtts = ["transformers==4.51.3"]
+rocm = [
+  "torch==2.9.1+rocm6.4 ; sys_platform == 'linux'",
+  "pytorch-triton-rocm==3.5.1 ; sys_platform == 'linux'",
+]
+cuda = ["torch>=2.0"]
+mps  = ["torch>=2.0"]
+cpu  = ["torch>=2.0"]
 
 [project.scripts]
 oralis = "oralis:main"
@@ -51,14 +57,21 @@ py-modules = ["oralis", "preprocess_text"]
 [[tool.uv.index]]
 name = "pytorch-rocm"
 url = "https://download.pytorch.org/whl/rocm6.4"
-
-[tool.uv]
-environments = ["sys_platform == 'linux'"]
+explicit = true
 
 [tool.uv.sources]
-torch = [{ index = "pytorch-rocm" }]
-torchaudio = [{ index = "pytorch-rocm" }]
-torchvision = [{ index = "pytorch-rocm" }]
+torch = [{ index = "pytorch-rocm", extra = "rocm" }]
+pytorch-triton-rocm = [{ index = "pytorch-rocm", extra = "rocm" }]
+
+[tool.uv]
+conflicts = [
+  [
+    { extra = "rocm" },
+    { extra = "cuda" },
+    { extra = "mps" },
+    { extra = "cpu" },
+  ],
+]
 
 [dependency-groups]
 dev = [

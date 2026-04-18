@@ -13,11 +13,16 @@ The primary use case and motivation to create this was the lack of local first t
 
 ## Installation
 
+Pick the extra that matches your hardware:
+
 ```bash
-uv sync
+uv sync --extra rocm   # AMD GPU (ROCm 6.4, Linux only)
+uv sync --extra cuda   # NVIDIA GPU
+uv sync --extra mps    # Apple Silicon
+uv sync --extra cpu    # CPU only (slow)
 ```
 
-Requires Python ≥ 3.10. A ROCm-enabled GPU is strongly recommended; CPU inference works but is slow.
+Requires Python ≥ 3.10.
 
 ## Studio
 
