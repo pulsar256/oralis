@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="form-page">
+  <h2>New Project</h2>
+  <form method="post" action="/projects" enctype="multipart/form-data">
+    <div class="field">
+      <label>Project Name</label>
+      <input type="text" name="name" required>
+    </div>
+    <div class="field">
+      <label>Source Text (paste)</label>
+      <textarea name="text" rows="10" placeholder="Paste text here…"></textarea>
+    </div>
+    <div class="field">
+      <label>Or upload a .txt file</label>
+      <input type="file" name="file" accept=".txt">
+    </div>
+    <button type="submit" class="btn-run">Create Project</button>
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,25 @@
+<div class="run-hdr">
+  <span>{{ run.settings.speaker }} — {{ run.settings.max_tokens }} tokens{% if run.settings.seed %} — seed {{ run.settings.seed }}{% endif %}</span>
+  <span class="run-eta" id="run-eta">{% if run.status.state == "stopped" %}⏸ Stopped — {{ chunks | length }} chunk{{ 's' if chunks | length != 1 }} complete{% endif %}</span>
+  {% if run.status.state == "running" %}
+  <form method="post" action="/projects/{{ project.slug }}/runs/{{ run.run_id }}/cancel" style="display:inline">
+    <button type="submit" class="btn-cancel">⏹ Stop</button>
+  </form>
+  {% elif run.status.state == "stopped" %}
+  <form method="post" action="/projects/{{ project.slug }}/runs/{{ run.run_id }}/resume" style="display:inline">
+    <button type="submit" class="btn-resume">▶ Resume</button>
+  </form>
+  {% endif %}
+</div>
+<div class="pb-outer">
+  <div class="pb-inner {% if run.status.chunk_count is none %}indeterminate{% endif %}"
+       id="run-progress" style="width:0%"></div>
+</div>
+<div id="run-status" class="run-status"></div>
+<div class="chunk-list" id="chunk-list">
+  {% for chunk in chunks %}{% include "run_chunk.html" %}{% endfor %}
+</div>
+<div id="final-audio-container"></div>
+{% if run.status.state == "running" or run.status.state == "pending" %}
+<script>document.addEventListener('DOMContentLoaded', function() { initSSE("{{ project.slug }}", "{{ run.run_id }}"); });</script>
+{% endif %}

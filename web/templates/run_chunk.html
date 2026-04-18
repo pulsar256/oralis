@@ -1,0 +1,9 @@
+<div class="chunk-row" id="chunk-{{ chunk.index }}">
+  <span class="chunk-num">Chunk {{ chunk.index }}</span>
+  <span class="chunk-snip" title="{{ chunk.snippet }}">{{ chunk.snippet }}</span>
+  <audio controls preload="none"
+    src="/projects/{{ project.slug }}/runs/{{ run.run_id }}/files/{{ chunk.wav_name }}"></audio>
+  <a class="dl"
+    href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/files/{{ chunk.wav_name }}"
+    download>↓</a>
+</div>

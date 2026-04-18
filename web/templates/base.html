@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <title>VibeVoice Studio</title>
+  <link rel="stylesheet" href="/static/app.css">
+  <script src="https://unpkg.com/htmx.org@2.0.4/dist/htmx.min.js"></script>
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <nav id="sidebar">
+    <div class="lbl">PROJECTS</div>
+    {% for p in projects %}
+    <div class="proj-item" data-slug="{{ p.slug }}">
+      <a href="/projects/{{ p.slug }}" class="proj proj-link {{ 'active' if active_slug == p.slug }}">{{ p.name }}</a>
+      <button class="btn-proj-action btn-proj-rename" onclick="startRename('{{ p.slug }}')" title="Rename">✎</button>
+      <form class="proj-delete-form" method="post" action="/projects/{{ p.slug }}/delete">
+        <button type="submit" class="btn-proj-action btn-proj-delete" title="Delete project"
+                data-name="{{ p.name | e }}"
+                onclick="return confirmDeleteProject(this)">✕</button>
+      </form>
+      <form class="rename-form" method="post" action="/projects/{{ p.slug }}/rename" style="display:none">
+        <input type="text" name="name" value="{{ p.name | e }}" required>
+        <button type="submit" title="Save">✓</button>
+        <button type="button" onclick="cancelRename(this)" title="Cancel">✕</button>
+      </form>
+    </div>
+    {% endfor %}
+    <a href="/projects/new" class="new-proj">+ New Project</a>
+  </nav>
+  <div id="main">
+    {% block content %}{% endblock %}
+  </div>
+</body>
+</html>

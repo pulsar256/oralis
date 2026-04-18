@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <div class="row">
+    <!-- Left: source + preprocessing -->
+    <div class="col-left">
+      <div class="slbl">SOURCE TEXT</div>
+      <div class="src-bar">
+        <span>{{ project.slug }}.txt — {{ source_kb }} KB</span>
+        <a href="/projects/new">Replace</a>
+      </div>
+
+      <div class="slbl">PREPROCESSING</div>
+      <form id="settings-form" method="post"
+            action="/projects/{{ project.slug }}/runs">
+        <div class="pre-box">
+          <div class="step-row">
+            {% for step in steps %}
+            <label>
+              <input type="checkbox" name="step_{{ step.id }}"
+                     {% if step.enabled %}checked{% endif %}
+                     hx-post="/preprocess/preview"
+                     hx-include="#settings-form"
+                     hx-target="#preview-compact"
+                     hx-trigger="change">
+              {{ step.label }}
+            </label>
+            {% endfor %}
+          </div>
+
+          <div class="prev-bar">
+            <span class="slbl" style="margin:0">PREVIEW</span>
+            <button type="button" class="toggle-link"
+                    hx-post="/preprocess/full"
+                    hx-include="#settings-form"
+                    hx-target="#full-text-body"
+                    onclick="openFullText()">⤢ View full transformed text</button>
+          </div>
+          <div id="preview-compact">{{ preview_html | safe }}</div>
+
+          <div id="full-text-panel">
+            <div class="ftp-header">
+              <span class="slbl" style="margin:0">FULL TRANSFORMED TEXT</span>
+              <span style="display:flex;gap:12px;align-items:center;">
+                <label style="font-size:11px;color:#888;cursor:pointer;">
+                  <input type="checkbox" id="diff-toggle" checked onchange="toggleDiff()"> Show diff
+                </label>
+                <a href="/projects/{{ project.slug }}/preprocessed" style="font-size:11px;color:#4a9eff;">↓ Download</a>
+                <button type="button" class="toggle-link" onclick="closeFullText()">✕ Close</button>
+              </span>
+            </div>
+            <div id="full-text-body"></div>
+          </div>
+        </div>
+
+        <input type="hidden" name="slug" value="{{ project.slug }}">
+      </form>
+    </div>
+
+    <!-- Right: synthesis settings -->
+    <div class="col-right">
+      <div class="slbl">SYNTHESIS SETTINGS</div>
+      <form method="post" action="/projects/{{ project.slug }}/runs">
+        <input type="hidden" name="slug" value="{{ project.slug }}">
+        <div class="synth-fields">
+          <div class="synth-row">
+            <label>Speaker</label>
+            <select name="speaker">
+              {% for v in voices %}
+              <option {% if v == last.speaker %}selected{% endif %}>{{ v }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="synth-row">
+            <label title="Maximum input text tokens per synthesis chunk (not LLM tokens). Smaller values use less VRAM; larger values may improve prosody across longer sentences.">Text tokens / chunk</label>
+            <input type="number" name="max_tokens" value="{{ last.max_tokens }}" min="64" max="8192">
+          </div>
+          <div class="synth-row">
+            <label title="Classifier-free guidance strength. Higher values follow the text more strictly but can reduce naturalness; lower values sound more relaxed.">CFG scale</label>
+            <input type="number" name="cfg_scale" value="{{ last.cfg_scale }}" step="0.1" min="0.5" max="3.0">
+          </div>
+          <div class="synth-row">
+            <label title="Fixed seed for reproducible output. Leave empty for non-deterministic synthesis.">Seed</label>
+            <input type="number" name="seed" value="{{ last.seed or '' }}" placeholder="random">
+          </div>
+        </div>
+        <div id="step-mirrors">
+          {% for step in steps %}
+          <input type="hidden" name="step_{{ step.id }}" value="{{ '1' if step.enabled else '0' }}">
+          {% endfor %}
+        </div>
+        <button type="submit" class="btn-run">▶ New Run</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="run-panel">
+  {% if active_run %}
+  {% set run = active_run %}
+  {% include "run_active.html" %}
+  {% endif %}
+
+  {% if prev_runs %}
+  <div class="prev-runs">
+    <div class="slbl">PREVIOUS RUNS</div>
+    {% for r in prev_runs %}
+    <div class="pr-row">
+      <span>Run #{{ loop.revindex }}</span>
+      <span>{{ r.settings.speaker }} — {{ r.settings.max_tokens }} txt-tok/chunk — cfg {{ r.settings.cfg_scale }} — {{ r.settings.seed if r.settings.seed is not none and r.settings.seed != '' else 'random' }}</span>
+      <span class="{{ 'done' if r.status.state == 'done' else 'stopped' }}">{{ '✓' if r.status.state == 'done' else '⏸' if r.status.state == 'stopped' else '✕' }} {{ r.status.state }}</span>
+      <a href="/projects/{{ project.slug }}/runs/{{ r.run_id }}">view</a>
+      {% if r.status.state == "done" %}
+      <audio controls preload="none"
+        src="/projects/{{ project.slug }}/runs/{{ r.run_id }}/download"
+        style="height:24px;min-width:220px;flex:1;"></audio>
+      {% endif %}
+      <a href="/projects/{{ project.slug }}/runs/{{ r.run_id }}/download">↓ wav</a>
+      {% if r.status.state == "done" %}
+      <a href="/projects/{{ project.slug }}/runs/{{ r.run_id }}/download-mp3"
+         title="Transcodes on first download — may take a moment for long audio">↓ mp3</a>
+      {% endif %}
+      <form method="post" action="/projects/{{ project.slug }}/runs/{{ r.run_id }}/delete" style="display:inline">
+        <button type="submit" class="btn-delete" onclick="return confirm('Delete this run and all its audio files?')">Delete</button>
+      </form>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
