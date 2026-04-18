@@ -11,7 +11,7 @@ The primary use case and motivation to create this was the lack of local first t
 
 ![img_1.png](docs/img.png)
 
-<audio controls src="docs/example.mp3"></audio>
+<video controls src="docs/example.mp4"></video>
 
 ## Installation
 
