@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="form-page">
+  <h2>Replace Source Text — {{ project.name }}</h2>
+  <form method="post" action="/projects/{{ project.slug }}/source" enctype="multipart/form-data">
+    <div class="field">
+      <label>Source Text (paste)</label>
+      <textarea name="text" rows="10" placeholder="Paste text here…"></textarea>
+    </div>
+    <div class="field">
+      <label>Or upload a .txt file</label>
+      <input type="file" name="file" accept=".txt">
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button type="submit" class="btn-run">Replace Text</button>
+      <a href="/projects/{{ project.slug }}" class="btn-cancel" style="display:inline-flex;align-items:center;">Cancel</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

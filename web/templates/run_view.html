@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <div class="run-view-hdr">
+    <a href="/projects/{{ project.slug }}" class="back-link">← {{ project.name }}</a>
+    <span>{{ run.settings.speaker }} — {{ run.settings.max_tokens }} txt-tok/chunk — cfg {{ run.settings.cfg_scale }}{% if run.settings.seed %} — seed {{ run.settings.seed }}{% endif %}</span>
+    <span class="{{ 'done' if run.status.state == 'done' else 'stopped' if run.status.state == 'stopped' else '' }}">
+      {{ '✓' if run.status.state == 'done' else '⏸' if run.status.state == 'stopped' else '✕' }} {{ run.status.state }}
+    </span>
+  </div>
+</div>
+
+<div class="run-panel">
+  {% if has_final %}
+  <div class="final-audio">
+    <span>Full output</span>
+    <audio controls preload="none"
+      src="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download"
+      style="height:28px;min-width:260px;flex:1;"></audio>
+    <details class="dl-drop">
+      <summary>↓ download</summary>
+      <div class="dl-menu">
+        <a href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download">WAV</a>
+        {% if run.status.state == "done" %}
+        <a href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download-mp3"
+           title="Transcodes on first download">MP3</a>
+        <a href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download-mp4"
+           title="Transcodes on first download">MP4</a>
+        {% endif %}
+      </div>
+    </details>
+  </div>
+  {% endif %}
+
+  <div class="slbl" style="margin-top:12px;">CHUNKS — {{ chunks | length }}</div>
+  <div class="chunk-list">
+    {% set r = run %}
+    {% for chunk in chunks %}{% include "run_chunk.html" %}{% endfor %}
+  </div>
+</div>
+{% endblock %}

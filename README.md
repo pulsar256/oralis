@@ -11,18 +11,49 @@ The primary use case and motivation to create this was the lack of local first t
 
 ![img_1.png](docs/img.png)
 
-## Installation
+## Getting Started
 
-Pick the extra that matches your hardware:
+### Prerequisites
+
+**Python 3.10 or newer** — check with `python --version`. If you need to install it, use your system package manager or [python.org](https://www.python.org/downloads/).
+
+**uv** — the package manager used by this project. Install it once:
 
 ```bash
-uv sync --extra rocm   # AMD GPU (ROCm 6.4, Linux only)
+# Linux / macOS
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Windows (PowerShell)
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+```
+
+Restart your terminal after installing so `uv` is on your PATH.
+
+**GPU drivers** (optional but strongly recommended — CPU synthesis is very slow):
+
+| Hardware | What to install |
+|---|---|
+| NVIDIA GPU (CUDA) | [CUDA Toolkit 12.x](https://developer.nvidia.com/cuda-downloads) |
+| AMD GPU (ROCm) | [ROCm 6.4](https://rocm.docs.amd.com/en/latest/deploy/linux/index.html) |
+| Apple Silicon | Nothing extra — MPS is built into macOS |
+
+### Installation
+
+Clone the repository and enter the directory:
+
+```bash
+git clone https://github.com/pulsar256/oralis
+cd oralis
+```
+
+Install dependencies — pick the extra that matches your hardware:
+
+```bash
 uv sync --extra cuda   # NVIDIA GPU
+uv sync --extra rocm   # AMD GPU (ROCm 6.4, Linux only)
 uv sync --extra mps    # Apple Silicon
 uv sync --extra cpu    # CPU only (slow)
 ```
-
-Requires Python ≥ 3.10.
 
 ## Studio
 
@@ -32,11 +63,11 @@ The web UI is the main interface. It manages projects, preprocesses text, and tr
 bash studio.sh
 ```
 
-Opens at `http://localhost:8000`. The script uses `UV_BACKEND` (default: `rocm`) to select the torch backend:
+Opens at `http://localhost:8000`. The script uses `UV_BACKEND` (default: `cuda`) to select the torch backend:
 
 ```bash
-UV_BACKEND=cuda bash studio.sh
-HOST=0.0.0.0 PORT=9000 UV_BACKEND=rocm bash studio.sh
+UV_BACKEND=rocm bash studio.sh
+HOST=0.0.0.0 PORT=9000 bash studio.sh
 ```
 
 **What you can do in the Studio:**
