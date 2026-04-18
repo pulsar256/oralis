@@ -76,7 +76,7 @@
             <input type="number" name="max_tokens" value="{{ last.max_tokens }}" min="64" max="8192">
           </div>
           <div class="synth-row">
-            <label title="Classifier-free guidance strength. Higher values follow the text more strictly but can reduce naturalness; lower values sound more relaxed.">CFG scale</label>
+            <label title="Classifier-free guidance strength. Higher values follow the text more strictly; lower values sound more natural but increase the risk of audio artifacts.">CFG scale</label>
             <input type="number" name="cfg_scale" value="{{ last.cfg_scale }}" step="0.1" min="0.5" max="3.0">
           </div>
           <div class="synth-row">

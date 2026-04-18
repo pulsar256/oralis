@@ -290,7 +290,7 @@ def parse_args() -> argparse.Namespace:
         type=float,
         default=1.5,
         dest="cfg_scale",
-        help="CFG guidance scale (default: 1.5)",
+        help="Classifier-free guidance scale (default: 1.5). Higher values follow the text more strictly; lower values sound more natural but increase the risk of audio artifacts.",
     )
     parser.add_argument(
         "--max-tokens",

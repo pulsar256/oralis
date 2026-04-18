@@ -149,7 +149,7 @@ Output is written as numbered chunks (`output_00001.wav`, `output_00002.wav`, â€
 | Flag             | Default   | Effect                                                                                                                                                               |
 |------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `--max-tokens N` | `512`     | Maximum text tokens per synthesis chunk. Smaller values use less VRAM and produce shorter audio segments; larger values may improve prosody across longer sentences. |
-| `--cfg-scale F`  | `1.5`     | Classifier-free guidance strength. Higher values make the output follow the text more strictly but can reduce naturalness; lower values sound more relaxed.          |
+| `--cfg-scale F`  | `1.5`     | Classifier-free guidance strength. Higher values follow the text more strictly; lower values sound more natural but increase the risk of audio artifacts.             |
 | `--seed N`       | *(unset)* | Fixed seed for reproducible output. Omit for non-deterministic synthesis.                                                                                            |
 
 Text preprocessing is also available standalone:
