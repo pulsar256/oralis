@@ -108,11 +108,31 @@ HOST=0.0.0.0 PORT=9000 bash studio.sh
 
 ## Voice Presets
 
-`.pt` files in `voices/` define the available speakers. Run `uv run --extra rocm oralis --list-voices` to see all names.
+`.pt` files in `voices/` define the available speakers. Run `uv run --extra cuda oralis --list-voices` to see all names.
 
 Default voice: `en-breeze_woman`.
 
-Additional experimental voices (multi-lingual, ~144 MB) are not bundled. Run `bash download_experimental_voices.sh` to fetch them into `voices/experimental_voices/`.
+### Supported Languages
+
+| Code | Language | Bundled voices | Experimental voices |
+|------|----------|:--------------:|:-------------------:|
+| `en` | English  | 6 | 11 |
+| `de` | German   | 2 | ✓ |
+| `fr` | French   | 2 | ✓ |
+| `it` | Italian  | 2 | — |
+| `nl` | Dutch    | 2 | — |
+| `pl` | Polish   | 2 | ✓ |
+| `pt` | Portuguese | 2 | ✓ |
+| `sp` | Spanish  | 2 | ✓ |
+| `jp` | Japanese | 2 | ✓ |
+| `kr` | Korean   | 2 | ✓ |
+| `in` | Hindi    | 2 | — |
+
+Experimental voices (~144 MB total) are not bundled. Fetch them with:
+
+```bash
+bash download_experimental_voices.sh
+```
 
 ## CLI
 
