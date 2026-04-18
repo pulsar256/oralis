@@ -62,6 +62,8 @@ function initSSE(slug, runId) {
     if (eta) eta.textContent = data.state === 'done' ? '✓ Complete' : '✕ Failed';
     const bar = document.getElementById('run-progress');
     if (bar) { bar.classList.remove('indeterminate'); bar.style.width = '100%'; }
+    const cancelForm = document.getElementById('cancel-form');
+    if (cancelForm) cancelForm.style.display = 'none';
     if (data.final_url && data.state === 'done') {
       const container = document.getElementById('final-audio-container');
       if (container) {

@@ -2,7 +2,7 @@
   <span>{{ run.settings.speaker }} — {{ run.settings.max_tokens }} txt-tok/chunk — cfg {{ run.settings.cfg_scale }} — {{ 'seed ' ~ run.settings.seed if run.settings.seed is not none and run.settings.seed != '' else 'random' }}</span>
   <span class="run-eta" id="run-eta">{% if run.status.state == "stopped" %}⏸ Stopped — {{ chunks | length }} chunk{{ 's' if chunks | length != 1 }} complete{% endif %}</span>
   {% if run.status.state == "running" %}
-  <form method="post" action="/projects/{{ project.slug }}/runs/{{ run.run_id }}/cancel" style="display:inline">
+  <form id="cancel-form" method="post" action="/projects/{{ project.slug }}/runs/{{ run.run_id }}/cancel" style="display:inline">
     <button type="submit" class="btn-cancel">⏹ Stop</button>
   </form>
   {% elif run.status.state == "stopped" %}
