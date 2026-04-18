@@ -29,6 +29,35 @@ powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | ie
 
 Restart your terminal after installing so `uv` is on your PATH.
 
+**direnv** (optional, ROCm users) — automatically activates the ROCm backend whenever you enter the project directory. Install it once:
+
+```bash
+# Arch / Manjaro
+sudo pacman -S direnv
+
+# Ubuntu / Debian
+sudo apt install direnv
+
+# macOS
+brew install direnv
+```
+
+Then hook it into your shell (add to `~/.bashrc`, `~/.zshrc`, etc.) and allow the project:
+
+```bash
+# bash
+echo 'eval "$(direnv hook bash)"' >> ~/.bashrc
+
+# zsh
+echo 'eval "$(direnv hook zsh)"' >> ~/.zshrc
+```
+
+```bash
+direnv allow   # run once inside the cloned repo
+```
+
+The included `.envrc` sets `UV_BACKEND=rocm` automatically on machines where `rocm-smi` is present, so `bash studio.sh` will use ROCm without any extra flags.
+
 **GPU drivers** (optional but strongly recommended — CPU synthesis is very slow):
 
 | Hardware | What to install |
