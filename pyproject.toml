@@ -35,7 +35,7 @@ rocm = [
   "pytorch-triton-rocm==3.5.1 ; sys_platform == 'linux'",
 ]
 cuda = ["torch>=2.0"]
-mps  = ["torch>=2.0"]
+mps  = ["torch>=2.0 ; sys_platform == 'darwin'"]
 cpu  = ["torch>=2.0"]
 
 [project.scripts]
