@@ -1,18 +1,29 @@
 from __future__ import annotations
 import asyncio
 import json
+import logging
 import re
+import sys
 import time
 from pathlib import Path
 from typing import AsyncIterator
 
 from web.project_store import _update_status_file
 
+log = logging.getLogger(__name__)
+
 _active: dict[str, asyncio.subprocess.Process] = {}
 _ANSI = re.compile(rb'\x1b\[[0-9;]*[A-Za-z]')
 
 
-async def _read_stderr(stream, log_path: Path, status_path: Path) -> None:
+async def _read_stdout(stream, run_id: str) -> None:
+    async for raw in stream:
+        line = raw.decode("utf-8", errors="replace").rstrip()
+        if line:
+            log.info("[%s] %s", run_id, line)
+
+
+async def _read_stderr(stream, log_path: Path, status_path: Path, run_id: str) -> None:
     """Read stderr pipe: log raw bytes to disk, extract current tqdm display line to status_path."""
     log_fh = log_path.open("wb")
     current_line = ""
@@ -27,9 +38,13 @@ async def _read_stderr(stream, log_path: Path, status_path: Path) -> None:
             text = _ANSI.sub(b"", chunk).decode("utf-8", errors="replace")
             for ch in text:
                 if ch == "\r":
-                    current_line = ""   # cursor returns to line start; next chars overwrite
+                    if current_line.strip():
+                        log.debug("[%s] %s", run_id, current_line.strip())
+                    current_line = ""
                 elif ch == "\n":
-                    current_line = ""   # move to new line
+                    if current_line.strip():
+                        log.debug("[%s] %s", run_id, current_line.strip())
+                    current_line = ""
                 else:
                     current_line += ch
             now = time.monotonic()
@@ -44,10 +59,15 @@ async def _read_stderr(stream, log_path: Path, status_path: Path) -> None:
         log_fh.close()
 
 
+def _oralis_bin() -> str:
+    # Use the oralis script installed in the active venv — same Python env, no uv re-sync.
+    return str(Path(sys.executable).parent / "oralis")
+
+
 async def launch(run_dir: Path, settings: dict, run_id: str) -> None:
     repo_root = Path(__file__).parent.parent
     cmd = [
-        "uv", "run", "oralis",
+        _oralis_bin(),
         "--input",      str(run_dir / "preprocessed.txt"),
         "--output",     str(run_dir / "output.wav"),
         "--speaker",    settings["speaker"],
@@ -58,14 +78,17 @@ async def launch(run_dir: Path, settings: dict, run_id: str) -> None:
         cmd += ["--seed", str(settings["seed"])]
     cmd += ["--progress-file", str(run_dir / "progress.json")]
 
+    log.info("[%s] starting: %s", run_id, " ".join(cmd))
     proc = await asyncio.create_subprocess_exec(
         *cmd, cwd=repo_root,
-        stdout=asyncio.subprocess.DEVNULL,
+        stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
+    log.info("[%s] pid=%d", run_id, proc.pid)
     _active[run_id] = proc
     _update_status_file(run_dir, state="running", pid=proc.pid)
-    asyncio.create_task(_read_stderr(proc.stderr, run_dir / "stderr.log", run_dir / "status.txt"))
+    asyncio.create_task(_read_stdout(proc.stdout, run_id))
+    asyncio.create_task(_read_stderr(proc.stderr, run_dir / "stderr.log", run_dir / "status.txt", run_id))
     asyncio.create_task(_monitor(proc, run_dir, run_id))
 
 
@@ -86,6 +109,7 @@ async def _monitor(proc: asyncio.subprocess.Process, run_dir: Path, run_id: str)
         state = "stopped"
     else:
         state = "failed"
+    log.info("[%s] exited rc=%d state=%s", run_id, proc.returncode, state)
     chunk_count = len(list(run_dir.glob("output_?????.wav")))
     _update_status_file(run_dir, state=state, chunk_count=chunk_count)
 

@@ -111,6 +111,10 @@ def delete_project(slug: str) -> None:
     shutil.rmtree(_project_dir(slug), ignore_errors=True)
 
 
+def update_source_text(slug: str, text: str) -> None:
+    (_project_dir(slug) / "source.txt").write_text(text, encoding="utf-8")
+
+
 def rename_project(slug: str, new_name: str) -> None:
     d = _project_dir(slug)
     meta = json.loads((d / "project.json").read_text(encoding="utf-8"))

@@ -9,6 +9,9 @@
   <form method="post" action="/projects/{{ project.slug }}/runs/{{ run.run_id }}/resume" style="display:inline">
     <button type="submit" class="btn-resume">▶ Resume</button>
   </form>
+  <form method="post" action="/projects/{{ project.slug }}/runs/{{ run.run_id }}/delete" style="display:inline">
+    <button type="submit" class="btn-delete" onclick="return confirm('Delete this run and all its audio files?')">Delete</button>
+  </form>
   {% endif %}
 </div>
 <div class="pb-outer">

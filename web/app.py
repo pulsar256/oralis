@@ -2,8 +2,10 @@
 from __future__ import annotations
 import asyncio
 import json
+import logging
 import os
 import subprocess
+import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -24,8 +26,9 @@ AVAILABLE_VOICES: list[str] = []
 async def _load_voices() -> None:
     global AVAILABLE_VOICES
     try:
+        oralis = str(Path(sys.executable).parent / "oralis")
         result = subprocess.run(
-            ["uv", "run", "oralis", "--list-voices"],
+            [oralis, "--list-voices"],
             capture_output=True, text=True, timeout=30,
             cwd=BASE_DIR.parent,
         )
@@ -35,8 +38,21 @@ async def _load_voices() -> None:
         AVAILABLE_VOICES = ["en-breeze_woman", "de-Spk0_man"]
 
 
+def _configure_logging() -> None:
+    level_name = os.environ.get("LOG_LEVEL", "info").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    log = logging.getLogger("web")
+    log.setLevel(level)
+    if not log.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)-8s %(name)s - %(message)s"))
+        log.addHandler(handler)
+        log.propagate = False
+
+
 @asynccontextmanager
 async def _lifespan(app: FastAPI):
+    _configure_logging()
     await _load_voices()
     yield
 
@@ -136,6 +152,27 @@ async def project_view(request: Request, slug: str):
         prev_runs=prev_runs,
         chunks=chunks,
     ))
+
+
+@app.get("/projects/{slug}/source")
+async def replace_source_form(request: Request, slug: str):
+    project = store.get_project(slug)
+    if not project:
+        raise HTTPException(404)
+    return templates.TemplateResponse(request, "project_source.html", _ctx(active_slug=slug, project=project))
+
+
+@app.post("/projects/{slug}/source")
+async def replace_source(slug: str, text: str = Form(""), file: UploadFile | None = File(None)):
+    project = store.get_project(slug)
+    if not project:
+        raise HTTPException(404)
+    if file and file.filename:
+        text = (await file.read()).decode("utf-8", errors="replace")
+    if not text.strip():
+        raise HTTPException(400, "Provide text or upload a file")
+    store.update_source_text(slug, text)
+    return RedirectResponse(f"/projects/{slug}", status_code=303)
 
 
 @app.post("/preprocess/preview", response_class=HTMLResponse)
@@ -383,10 +420,14 @@ async def resume_run(slug: str, run_id: str):
 
 
 def main():
+    import argparse
     import uvicorn
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--log-level", default=os.environ.get("LOG_LEVEL", "info"))
+    args, _ = parser.parse_known_args()
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "8000"))
-    uvicorn.run("web.app:app", host=host, port=port, reload=True)
+    uvicorn.run("web.app:app", host=host, port=port, reload=True, log_level=args.log_level)
 
 
 @app.post("/projects/{slug}/runs/{run_id}/delete")
