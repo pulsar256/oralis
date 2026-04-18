@@ -11,8 +11,6 @@ The primary use case and motivation to create this was the lack of local first t
 
 ![img_1.png](docs/img.png)
 
-<video src='https://github.com/pulsar256/oralis/raw/refs/heads/main/docs/example.mp4'/>
-
 ## Installation
 
 ```bash
