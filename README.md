@@ -114,19 +114,19 @@ Default voice: `en-breeze_woman`.
 
 ### Supported Languages
 
-| Code | Language | Bundled voices | Experimental voices |
-|------|----------|:--------------:|:-------------------:|
-| `en` | English  | 6 | 11 |
-| `de` | German   | 2 | ✓ |
-| `fr` | French   | 2 | ✓ |
-| `it` | Italian  | 2 | — |
-| `nl` | Dutch    | 2 | — |
-| `pl` | Polish   | 2 | ✓ |
-| `pt` | Portuguese | 2 | ✓ |
-| `sp` | Spanish  | 2 | ✓ |
-| `jp` | Japanese | 2 | ✓ |
-| `kr` | Korean   | 2 | ✓ |
-| `in` | Hindi    | 2 | — |
+| Code | Language   | Bundled voices | Experimental voices |
+|------|------------|:--------------:|:-------------------:|
+| `en` | English    |       ✓        |          ✓          |
+| `de` | German     |       ✓        |          ✓          |
+| `fr` | French     |       ✓        |          ✓          |
+| `it` | Italian    |       ✓        |          —          |
+| `nl` | Dutch      |       ✓        |          —          |
+| `pl` | Polish     |       ✓        |          ✓          |
+| `pt` | Portuguese |       ✓        |          ✓          |
+| `sp` | Spanish    |       ✓        |          ✓          |
+| `jp` | Japanese   |       ✓        |          ✓          |
+| `kr` | Korean     |       ✓        |          ✓          |
+| `in` | Hindi      |       ✓        |          —          |
 
 Experimental voices (~144 MB total) are not bundled. Fetch them with:
 
