@@ -73,21 +73,35 @@ function initSSE(slug, runId) {
         audio.controls = true;
         audio.preload = 'none';
         audio.src = data.final_url;
-        const link = document.createElement('a');
-        link.href = data.final_url;
-        link.download = '';
-        link.textContent = '↓ wav';
-        const mp3link = document.createElement('a');
-        mp3link.href = data.final_url.replace('/download', '/download-mp3');
-        mp3link.title = 'Transcodes on first download — may take a moment for long audio';
-        mp3link.textContent = '↓ mp3';
-        wrapper.append(label, audio, link, mp3link);
+        wrapper.append(label, audio, _makeDownloadDropdown(data.final_url));
         container.replaceChildren(wrapper);
       }
     }
   });
 
   es.onerror = () => es.close();
+}
+
+function _makeDownloadDropdown(baseUrl) {
+  const details = document.createElement('details');
+  details.className = 'dl-drop';
+  const summary = document.createElement('summary');
+  summary.textContent = '↓ download';
+  const menu = document.createElement('div');
+  menu.className = 'dl-menu';
+  for (const [label, suffix, hint] of [
+    ['WAV', '', ''],
+    ['MP3', '-mp3', 'Transcodes on first download'],
+    ['MP4', '-mp4', 'Transcodes on first download'],
+  ]) {
+    const a = document.createElement('a');
+    a.href = baseUrl + suffix;
+    if (hint) a.title = hint;
+    a.textContent = label;
+    menu.appendChild(a);
+  }
+  details.append(summary, menu);
+  return details;
 }
 
 function _makePendingRow(index) {

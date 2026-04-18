@@ -193,6 +193,24 @@ async def create_run(request: Request, slug: str):
     return RedirectResponse(f"/projects/{slug}", status_code=303)
 
 
+@app.get("/projects/{slug}/runs/{run_id}")
+async def run_view(request: Request, slug: str, run_id: str):
+    project = store.get_project(slug)
+    run = store.get_run(slug, run_id)
+    if not project or not run:
+        raise HTTPException(404)
+    chunks = store.get_chunks(slug, run_id)
+    run_dir = store.PROJECTS_DIR / slug / "runs" / run_id
+    has_final = (run_dir / "output.wav").exists() or bool(chunks)
+    return templates.TemplateResponse(request, "run_view.html", _ctx(
+        active_slug=slug,
+        project=project,
+        run=run,
+        chunks=chunks,
+        has_final=has_final,
+    ))
+
+
 @app.get("/projects/{slug}/runs/{run_id}/stream")
 async def run_stream(slug: str, run_id: str):
     project = store.get_project(slug)
@@ -285,6 +303,42 @@ async def download_mp3(slug: str, run_id: str):
             raise HTTPException(500, f"Transcoding failed: {exc}") from exc
 
     return FileResponse(mp3_path, filename=f"{slug}_{run_id}.mp3", media_type="audio/mpeg")
+
+
+@app.get("/projects/{slug}/runs/{run_id}/download-mp4")
+async def download_mp4(slug: str, run_id: str):
+    run_dir = store.PROJECTS_DIR / slug / "runs" / run_id
+    mp4_path = run_dir / "output.mp4"
+
+    if not mp4_path.exists():
+        wav = run_dir / "output.wav"
+        if not wav.exists():
+            wavs = sorted(run_dir.glob("output_?????.wav"))
+            if not wavs:
+                raise HTTPException(404)
+            wav = wavs[0]
+
+        def _transcode():
+            tmp = mp4_path.with_suffix(".mp4.tmp")
+            result = subprocess.run(
+                ["ffmpeg", "-y", "-loglevel", "error",
+                 "-f", "lavfi", "-i", "color=c=#111111:s=320x40:r=1",
+                 "-i", str(wav),
+                 "-shortest", "-c:v", "libx264", "-tune", "stillimage",
+                 "-c:a", "aac", "-b:a", "192k", "-f", "mp4", str(tmp)],
+                capture_output=True,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(result.stderr.decode())
+            tmp.rename(mp4_path)
+
+        loop = asyncio.get_running_loop()
+        try:
+            await loop.run_in_executor(None, _transcode)
+        except Exception as exc:
+            raise HTTPException(500, f"Transcoding failed: {exc}") from exc
+
+    return FileResponse(mp4_path, filename=f"{slug}_{run_id}.mp4", media_type="video/mp4")
 
 
 @app.post("/projects/{slug}/delete")
