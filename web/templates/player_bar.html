@@ -1,0 +1,21 @@
+<div id="player-bar" style="display:none">
+  <div class="player-row1">
+    <button id="player-play" class="player-btn" aria-label="Play/Pause">▶</button>
+    <button id="player-next" class="player-btn player-btn-next" aria-label="Next track">⏭</button>
+    <div class="player-track">
+      <div id="player-label" class="player-label"></div>
+      <div id="player-scrubber" class="player-scrubber">
+        <div id="player-scrub-fill" class="player-scrub-fill"></div>
+      </div>
+    </div>
+    <span id="player-time" class="player-time"></span>
+    <label class="player-auto-label" title="Automatically queue chunks as they finish synthesizing">
+      <input type="checkbox" id="player-auto-queue"> auto-queue
+    </label>
+  </div>
+  <div class="player-row2">
+    <span class="player-up-next">UP NEXT</span>
+    <div id="player-pills" class="player-pills"></div>
+    <button id="player-clear" class="player-clear">✕ clear</button>
+  </div>
+</div>

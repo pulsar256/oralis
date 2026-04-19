@@ -111,9 +111,12 @@
       <span class="{{ 'done' if r.status.state == 'done' else 'stopped' }}">{{ '✓' if r.status.state == 'done' else '⏸' if r.status.state == 'stopped' else '✕' }} {{ r.status.state }}</span>
       <a href="/projects/{{ project.slug }}/runs/{{ r.run_id }}">view</a>
       {% if r.status.state == "done" %}
-      <audio controls preload="none"
-        src="/projects/{{ project.slug }}/runs/{{ r.run_id }}/download"
-        style="height:24px;min-width:220px;flex:1;"></audio>
+      <button class="btn-queue"
+        data-url="/projects/{{ project.slug }}/runs/{{ r.run_id }}/download"
+        data-label="{{ project.name }} — Run output">+ Queue</button>
+      <button class="btn-replace"
+        data-url="/projects/{{ project.slug }}/runs/{{ r.run_id }}/download"
+        data-label="{{ project.name }} — Run output">⏎ Replace</button>
       {% endif %}
       <details class="dl-drop">
         <summary>↓ download</summary>

@@ -1,8 +1,12 @@
 <div class="chunk-row" id="chunk-{{ chunk.index }}">
   <span class="chunk-num">Chunk {{ chunk.index }}</span>
   <span class="chunk-snip" title="{{ chunk.snippet }}">{{ chunk.snippet }}</span>
-  <audio controls preload="none"
-    src="/projects/{{ project.slug }}/runs/{{ run.run_id }}/files/{{ chunk.wav_name }}"></audio>
+  <button class="btn-queue"
+    data-url="/projects/{{ project.slug }}/runs/{{ run.run_id }}/files/{{ chunk.wav_name }}"
+    data-label="{{ project.name }} — Chunk {{ chunk.index }}">+ Queue</button>
+  <button class="btn-replace"
+    data-url="/projects/{{ project.slug }}/runs/{{ run.run_id }}/files/{{ chunk.wav_name }}"
+    data-label="{{ project.name }} — Chunk {{ chunk.index }}">⏎ Replace</button>
   <a class="dl"
     href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/files/{{ chunk.wav_name }}"
     download>↓</a>

@@ -14,9 +14,12 @@
   {% if has_final %}
   <div class="final-audio">
     <span>Full output</span>
-    <audio controls preload="none"
-      src="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download"
-      style="height:28px;min-width:260px;flex:1;"></audio>
+    <button class="btn-queue"
+      data-url="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download"
+      data-label="{{ project.name }} — Full output">+ Queue</button>
+    <button class="btn-replace"
+      data-url="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download"
+      data-label="{{ project.name }} — Full output">⏎ Replace</button>
     <details class="dl-drop">
       <summary>↓ download</summary>
       <div class="dl-menu">

@@ -1,7 +1,7 @@
 from web.preprocessor import apply_steps, diff_html, preview, full_diff, default_steps, KNOWN_STEPS
 
 def test_known_steps_have_id_and_label():
-    assert len(KNOWN_STEPS) == 3
+    assert len(KNOWN_STEPS) == 4
     for step in KNOWN_STEPS:
         assert "id" in step
         assert "label" in step

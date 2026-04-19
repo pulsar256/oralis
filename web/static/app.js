@@ -1,9 +1,13 @@
 // web/static/app.js
 
-function initSSE(slug, runId) {
+let _activeSSE = null;
+
+function initSSE(slug, runId, projectName) {
+  if (_activeSSE) { _activeSSE.close(); _activeSSE = null; }
   const list = document.getElementById('chunk-list');
   if (!list) return;
   const es = new EventSource(`/projects/${slug}/runs/${runId}/stream`);
+  _activeSSE = es;
   let doneCount = list.querySelectorAll('.chunk-row').length;
   let totalCount = 0;
 
@@ -46,6 +50,12 @@ function initSSE(slug, runId) {
     _updateBar(doneCount, totalCount);
     _updateEta(doneCount, totalCount);
     newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    const queueBtn = newRow.querySelector('.btn-queue');
+    if (queueBtn) {
+      document.dispatchEvent(new CustomEvent('oralis:chunk-ready', {
+        detail: { url: queueBtn.dataset.url, label: queueBtn.dataset.label }
+      }));
+    }
   });
 
   es.addEventListener('status', (e) => {
@@ -55,6 +65,7 @@ function initSSE(slug, runId) {
 
   es.addEventListener('done', (e) => {
     es.close();
+    _activeSSE = null;
     const data = JSON.parse(e.data);
     const statusEl = document.getElementById('run-status');
     if (statusEl) statusEl.textContent = '';
@@ -65,23 +76,33 @@ function initSSE(slug, runId) {
     const cancelForm = document.getElementById('cancel-form');
     if (cancelForm) cancelForm.style.display = 'none';
     if (data.final_url && data.state === 'done') {
+      const trackLabel = (projectName || slug) + ' \u2014 Full output';
       const container = document.getElementById('final-audio-container');
       if (container) {
         const wrapper = document.createElement('div');
         wrapper.className = 'final-audio';
-        const label = document.createElement('span');
-        label.textContent = 'Full output';
-        const audio = document.createElement('audio');
-        audio.controls = true;
-        audio.preload = 'none';
-        audio.src = data.final_url;
-        wrapper.append(label, audio, _makeDownloadDropdown(data.final_url));
+        const lbl = document.createElement('span');
+        lbl.textContent = 'Full output';
+        const queueBtn = document.createElement('button');
+        queueBtn.className = 'btn-queue';
+        queueBtn.textContent = '+ Queue';
+        queueBtn.dataset.url = data.final_url;
+        queueBtn.dataset.label = trackLabel;
+        const replaceBtn = document.createElement('button');
+        replaceBtn.className = 'btn-replace';
+        replaceBtn.textContent = '\u21b2 Replace';
+        replaceBtn.dataset.url = data.final_url;
+        replaceBtn.dataset.label = trackLabel;
+        wrapper.append(lbl, queueBtn, replaceBtn, _makeDownloadDropdown(data.final_url));
         container.replaceChildren(wrapper);
       }
+      document.dispatchEvent(new CustomEvent('oralis:chunk-ready', {
+        detail: { url: data.final_url, label: trackLabel }
+      }));
     }
   });
 
-  es.onerror = () => es.close();
+  es.onerror = () => { es.close(); _activeSSE = null; };
 }
 
 function _makeDownloadDropdown(baseUrl) {
@@ -192,4 +213,32 @@ document.addEventListener('change', (e) => {
         if (body) body.innerHTML = html;
       });
   }
+});
+
+// Playlist button delegation
+document.addEventListener('click', (e) => {
+  const queueBtn = e.target.closest('.btn-queue');
+  const replaceBtn = e.target.closest('.btn-replace');
+  if (queueBtn) {
+    document.dispatchEvent(new CustomEvent('oralis:playlist-add', {
+      detail: { url: queueBtn.dataset.url, label: queueBtn.dataset.label }
+    }));
+  } else if (replaceBtn) {
+    document.dispatchEvent(new CustomEvent('oralis:playlist-replace', {
+      detail: { tracks: [{ url: replaceBtn.dataset.url, label: replaceBtn.dataset.label }] }
+    }));
+  }
+});
+
+// Update sidebar active highlight after HTMX navigation
+document.addEventListener('htmx:afterSettle', () => {
+  const path = window.location.pathname;
+  document.querySelectorAll('#sidebar .proj-link').forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === path);
+  });
+});
+
+// Close live SSE stream before HTMX replaces the page content
+document.addEventListener('htmx:beforeSwap', () => {
+  if (_activeSSE) { _activeSSE.close(); _activeSSE = null; }
 });

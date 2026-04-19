@@ -182,15 +182,39 @@ def test_sse_done_payload_is_json(client, monkeypatch):
             break
 
 
-def test_prev_runs_have_audio_player(client):
+def test_prev_runs_have_queue_buttons(client):
     import web.project_store as ps
-    client.post("/projects", data={"name": "Audio Prev", "text": "text"})
+    client.post("/projects", data={"name": "Queue Prev", "text": "text"})
     settings = {"speaker": "de-Spk0_man", "max_tokens": 320, "cfg_scale": 1.5,
                 "seed": None, "preprocessor": {"steps": []}}
-    run_id = ps.create_run("audio_prev", settings, "text")
-    ps.update_status("audio_prev", run_id, state="done", chunk_count=1)
+    run_id = ps.create_run("queue_prev", settings, "text")
+    ps.update_status("queue_prev", run_id, state="done", chunk_count=1)
 
-    r = client.get("/projects/audio_prev")
+    r = client.get("/projects/queue_prev")
     assert r.status_code == 200
-    assert f"/runs/{run_id}/download" in r.text
-    assert "<audio" in r.text
+    assert "btn-queue" in r.text
+    assert "<audio" not in r.text
+
+
+def test_player_bar_present(client):
+    r = client.get("/projects/new")
+    assert r.status_code == 200
+    assert 'id="player-bar"' in r.text
+
+
+def test_run_view_has_queue_buttons(client):
+    import web.project_store as ps
+    client.post("/projects", data={"name": "Run View Q", "text": "text"})
+    settings = {"speaker": "de-Spk0_man", "max_tokens": 320, "cfg_scale": 1.5,
+                "seed": None, "preprocessor": {"steps": []}}
+    run_id = ps.create_run("run_view_q", settings, "text")
+    run_dir = ps.PROJECTS_DIR / "run_view_q" / "runs" / run_id
+    (run_dir / "output_00001.wav").write_bytes(b"RIFF" + b"\x00" * 40)
+    (run_dir / "output_00001.txt").write_text("Test snippet")
+    (run_dir / "output.wav").write_bytes(b"RIFF" + b"\x00" * 40)
+    ps.update_status("run_view_q", run_id, state="done", chunk_count=1)
+
+    r = client.get(f"/projects/run_view_q/runs/{run_id}")
+    assert r.status_code == 200
+    assert "btn-queue" in r.text
+    assert "<audio" not in r.text
