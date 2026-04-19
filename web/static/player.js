@@ -52,10 +52,14 @@
     document.addEventListener('oralis:playlist-replace', (e) => {
       replaceQueue(e.detail.tracks);
     });
+    document.addEventListener('oralis:player-set-autoqueue', (e) => {
+      autoQueue = !!e.detail.value;
+      if (autoToggle) autoToggle.checked = autoQueue;
+      localStorage.setItem(STORAGE_KEY, String(autoQueue));
+    });
 
     // Re-show bar after HTMX navigation if queue is non-empty
     document.addEventListener('htmx:afterSettle', () => {
-      if (queue.length > 0) showBar();
     });
   }
 
@@ -67,7 +71,6 @@
     } else {
       renderPills();
     }
-    showBar();
   }
 
   function replaceQueue(tracks) {
@@ -79,7 +82,6 @@
       return;
     }
     playTrack(0);
-    showBar();
   }
 
   function playTrack(index) {
@@ -128,7 +130,6 @@
     scrubFill.style.width = '0%';
     playBtn.textContent = '▶';
     renderPills();
-    hideBar();
   }
 
   function renderPills() {
@@ -159,9 +160,6 @@
       pillRow.appendChild(more);
     }
   }
-
-  function showBar() { bar.style.display = ''; }
-  function hideBar() { bar.style.display = 'none'; }
 
   function fmt(s) {
     const m   = Math.floor(s / 60);

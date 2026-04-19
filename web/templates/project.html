@@ -96,46 +96,11 @@
 </div>
 
 <div class="run-panel">
-  {% if active_run %}
-  {% set run = active_run %}
-  {% include "run_active.html" %}
-  {% endif %}
-
-  {% if prev_runs %}
-  <div class="prev-runs">
-    <div class="slbl">PREVIOUS RUNS</div>
-    {% for r in prev_runs %}
-    <div class="pr-row">
-      <span>Run #{{ loop.revindex }}</span>
-      <span>{{ r.settings.speaker }} — {{ r.settings.max_tokens }} txt-tok/chunk — cfg {{ r.settings.cfg_scale }} — {{ r.settings.seed if r.settings.seed is not none and r.settings.seed != '' else 'random' }}</span>
-      <span class="{{ 'done' if r.status.state == 'done' else 'stopped' }}">{{ '✓' if r.status.state == 'done' else '⏸' if r.status.state == 'stopped' else '✕' }} {{ r.status.state }}</span>
-      <a href="/projects/{{ project.slug }}/runs/{{ r.run_id }}">view</a>
-      {% if r.status.state == "done" %}
-      <button class="btn-queue"
-        data-url="/projects/{{ project.slug }}/runs/{{ r.run_id }}/download"
-        data-label="{{ project.name }} — Run output">+ Queue</button>
-      <button class="btn-replace"
-        data-url="/projects/{{ project.slug }}/runs/{{ r.run_id }}/download"
-        data-label="{{ project.name }} — Run output">⏎ Replace</button>
-      {% endif %}
-      <details class="dl-drop">
-        <summary>↓ download</summary>
-        <div class="dl-menu">
-          <a href="/projects/{{ project.slug }}/runs/{{ r.run_id }}/download">WAV</a>
-          {% if r.status.state == "done" %}
-          <a href="/projects/{{ project.slug }}/runs/{{ r.run_id }}/download-mp3"
-             title="Transcodes on first download">MP3</a>
-          <a href="/projects/{{ project.slug }}/runs/{{ r.run_id }}/download-mp4"
-             title="Transcodes on first download">MP4</a>
-          {% endif %}
-        </div>
-      </details>
-      <form method="post" action="/projects/{{ project.slug }}/runs/{{ r.run_id }}/delete" style="display:inline">
-        <button type="submit" class="btn-delete" onclick="return confirm('Delete this run and all its audio files?')">Delete</button>
-      </form>
-    </div>
-    {% endfor %}
-  </div>
+  {% if runs %}
+  <div class="slbl">SYNTHESIS RUNS</div>
+  {% for r in runs %}
+    {% include "run_item.html" %}
+  {% endfor %}
   {% endif %}
 </div>
 {% endblock %}

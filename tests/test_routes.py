@@ -192,7 +192,7 @@ def test_prev_runs_have_queue_buttons(client):
 
     r = client.get("/projects/queue_prev")
     assert r.status_code == 200
-    assert "btn-queue" in r.text
+    assert "btn-play-run" in r.text
     assert "<audio" not in r.text
 
 

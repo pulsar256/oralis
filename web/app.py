@@ -126,31 +126,45 @@ async def project_view(request: Request, slug: str):
     project = store.get_project(slug)
     if not project:
         raise HTTPException(404)
-    runs = store.list_runs(slug)
-    active_run = next((r for r in runs if r.status["state"] in ("running", "pending", "stopped")), None)
-    if active_run and active_run.status["state"] == "running":
-        pid = active_run.status.get("pid")
-        if pid:
-            try:
-                os.kill(pid, 0)
-            except OSError:
-                store.update_status(slug, active_run.run_id, state="stopped")
-                active_run.status["state"] = "stopped"
-    prev_runs = [r for r in runs if r is not active_run and r.status["state"] in ("done", "failed", "stopped")]
-    saved = (runs[0].settings.get("preprocessor", {}).get("steps") or []) if runs else []
+    all_runs = store.list_runs(slug)
+    
+    # Check for stalled running runs
+    for r in all_runs:
+        if r.status["state"] == "running":
+            pid = r.status.get("pid")
+            if pid:
+                try:
+                    os.kill(pid, 0)
+                except OSError:
+                    store.update_status(slug, r.run_id, state="stopped")
+                    r.status["state"] = "stopped"
+
+    active_run = next((r for r in all_runs if r.status["state"] in ("running", "pending", "stopped")), None)
+    
+    # Prepare runs with their chunks and final audio status
+    runs_data = []
+    for r in all_runs:
+        run_dir = store.PROJECTS_DIR / slug / "runs" / r.run_id
+        chunks = store.get_chunks(slug, r.run_id)
+        runs_data.append({
+            "run": r,
+            "chunks": chunks,
+            "has_final": (run_dir / "output.wav").exists() or bool(chunks)
+        })
+
+    saved = (all_runs[0].settings.get("preprocessor", {}).get("steps") or []) if all_runs else []
     steps = _merge_steps(saved) if saved else default_steps()
-    chunks = store.get_chunks(slug, active_run.run_id) if active_run else []
+    
     return templates.TemplateResponse(request, "project.html", _ctx(
         active_slug=slug,
         project=project,
         steps=steps,
         voices=AVAILABLE_VOICES,
-        last=_last_settings(runs),
+        last=_last_settings(all_runs),
         preview_html=preview(project.source_text, steps),
         source_kb=round(len(project.source_text.encode()) / 1024, 1),
-        active_run=active_run,
-        prev_runs=prev_runs,
-        chunks=chunks,
+        runs=runs_data,
+        active_run_id=active_run.run_id if active_run else None,
     ))
 
 

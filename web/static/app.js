@@ -1,32 +1,36 @@
 // web/static/app.js
 
-let _activeSSE = null;
+let _activeSSEs = {};
 
 function initSSE(slug, runId, projectName) {
-  if (_activeSSE) { _activeSSE.close(); _activeSSE = null; }
-  const list = document.getElementById('chunk-list');
-  if (!list) return;
+  if (_activeSSEs[runId]) { _activeSSEs[runId].close(); }
+  
+  const container = document.getElementById(`run-container-${runId}`);
+  if (!container) return;
+  
+  const list = container.querySelector('.chunk-list');
   const es = new EventSource(`/projects/${slug}/runs/${runId}/stream`);
-  _activeSSE = es;
+  _activeSSEs[runId] = es;
+  
   let doneCount = list.querySelectorAll('.chunk-row').length;
   let totalCount = 0;
 
   es.addEventListener('plan', (e) => {
     totalCount = parseInt(e.data, 10);
-    const bar = document.getElementById('run-progress');
+    const bar = container.querySelector('.pb-inner');
     if (bar) bar.classList.remove('indeterminate');
     for (let i = 1; i <= totalCount; i++) {
-      if (!document.getElementById(`chunk-${i}`)) {
-        list.appendChild(_makePendingRow(i));
+      if (!container.querySelector(`#chunk-${runId}-${i}`)) {
+        list.appendChild(_makePendingRow(runId, i));
       }
     }
-    _updateBar(doneCount, totalCount);
-    _updateEta(doneCount, totalCount);
+    _updateBar(container, runId, doneCount, totalCount);
+    _updateEta(container, runId, doneCount, totalCount);
   });
 
   es.addEventListener('progress', (e) => {
     const current = parseInt(e.data, 10);
-    const row = document.getElementById(`chunk-${current}`);
+    const row = container.querySelector(`#chunk-${runId}-${current}`);
     if (row && row.dataset.state === 'pending') {
       row.dataset.state = 'synthesizing';
       row.classList.remove('chunk-pending');
@@ -40,16 +44,22 @@ function initSSE(slug, runId, projectName) {
     tmp.innerHTML = e.data;
     const newRow = tmp.firstElementChild;
     if (!newRow) return;
-    const existing = document.getElementById(newRow.id);
+    
+    const existing = container.querySelector(`#${newRow.id}`);
     if (existing) {
       existing.replaceWith(newRow);
     } else {
       list.appendChild(newRow);
     }
     doneCount++;
-    _updateBar(doneCount, totalCount);
-    _updateEta(doneCount, totalCount);
-    newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    _updateBar(container, runId, doneCount, totalCount);
+    _updateEta(container, runId, doneCount, totalCount);
+    
+    // Only scroll if the body is expanded
+    if (container.querySelector('.run-body').style.display !== 'none') {
+      newRow.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+    
     const queueBtn = newRow.querySelector('.btn-queue');
     if (queueBtn) {
       document.dispatchEvent(new CustomEvent('oralis:chunk-ready', {
@@ -59,78 +69,69 @@ function initSSE(slug, runId, projectName) {
   });
 
   es.addEventListener('status', (e) => {
-    const el = document.getElementById('run-status');
+    const el = container.querySelector('.run-status');
     if (el) el.textContent = e.data;
   });
 
   es.addEventListener('done', (e) => {
     es.close();
-    _activeSSE = null;
+    delete _activeSSEs[runId];
     const data = JSON.parse(e.data);
-    const statusEl = document.getElementById('run-status');
+    
+    const statusEl = container.querySelector('.run-status');
     if (statusEl) statusEl.textContent = '';
-    const eta = document.getElementById('run-eta');
+    
+    const eta = container.querySelector('.run-eta');
     if (eta) eta.textContent = data.state === 'done' ? '✓ Complete' : '✕ Failed';
-    const bar = document.getElementById('run-progress');
-    if (bar) { bar.classList.remove('indeterminate'); bar.style.width = '100%'; }
-    const cancelForm = document.getElementById('cancel-form');
-    if (cancelForm) cancelForm.style.display = 'none';
-    if (data.final_url && data.state === 'done') {
-      const trackLabel = (projectName || slug) + ' \u2014 Full output';
-      const container = document.getElementById('final-audio-container');
-      if (container) {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'final-audio';
-        const lbl = document.createElement('span');
-        lbl.textContent = 'Full output';
-        const queueBtn = document.createElement('button');
-        queueBtn.className = 'btn-queue';
-        queueBtn.textContent = '+ Queue';
-        queueBtn.dataset.url = data.final_url;
-        queueBtn.dataset.label = trackLabel;
-        const replaceBtn = document.createElement('button');
-        replaceBtn.className = 'btn-replace';
-        replaceBtn.textContent = '\u21b2 Replace';
-        replaceBtn.dataset.url = data.final_url;
-        replaceBtn.dataset.label = trackLabel;
-        wrapper.append(lbl, queueBtn, replaceBtn, _makeDownloadDropdown(data.final_url));
-        container.replaceChildren(wrapper);
-      }
-      document.dispatchEvent(new CustomEvent('oralis:chunk-ready', {
-        detail: { url: data.final_url, label: trackLabel }
-      }));
+    
+    const pill = container.querySelector('.run-status-pill');
+    if (pill) {
+      pill.textContent = data.state;
+      pill.className = `run-status-pill ${data.state}`;
+    }
+
+    _updateBar(container, runId, totalCount, totalCount);
+    
+    if (data.state === 'done') {
+        const trackLabel = (projectName || slug) + ' \u2014 Full output';
+        
+        // Update the header Play button to point to the final audio
+        const playBtn = container.querySelector('.btn-play-run');
+        if (playBtn) {
+            playBtn.dataset.url = data.final_url;
+            playBtn.dataset.label = trackLabel;
+            playBtn.removeAttribute('title');
+        }
+        
+        document.dispatchEvent(new CustomEvent('oralis:chunk-ready', {
+          detail: { url: data.final_url, label: trackLabel }
+        }));
     }
   });
 
-  es.onerror = () => { es.close(); _activeSSE = null; };
+  es.onerror = () => { es.close(); delete _activeSSEs[runId]; };
 }
 
-function _makeDownloadDropdown(baseUrl) {
-  const details = document.createElement('details');
-  details.className = 'dl-drop';
-  const summary = document.createElement('summary');
-  summary.textContent = '↓ download';
-  const menu = document.createElement('div');
-  menu.className = 'dl-menu';
-  for (const [label, suffix, hint] of [
-    ['WAV', '', ''],
-    ['MP3', '-mp3', 'Transcodes on first download'],
-    ['MP4', '-mp4', 'Transcodes on first download'],
-  ]) {
-    const a = document.createElement('a');
-    a.href = baseUrl + suffix;
-    if (hint) a.title = hint;
-    a.textContent = label;
-    menu.appendChild(a);
+function toggleRun(runId, event) {
+  if (event && (event.target.closest('.run-header-actions') || event.target.closest('.dl-drop'))) return;
+  
+  const body = document.getElementById(`body-${runId}`);
+  const arrow = document.getElementById(`arrow-${runId}`);
+  if (!body || !arrow) return;
+  
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    arrow.textContent = '▼';
+  } else {
+    body.style.display = 'none';
+    arrow.textContent = '▶';
   }
-  details.append(summary, menu);
-  return details;
 }
 
-function _makePendingRow(index) {
+function _makePendingRow(runId, index) {
   const div = document.createElement('div');
   div.className = 'chunk-row chunk-pending';
-  div.id = `chunk-${index}`;
+  div.id = `chunk-${runId}-${index}`;
   div.dataset.state = 'pending';
   div.innerHTML =
     `<span class="chunk-num">Chunk ${index}</span>` +
@@ -138,15 +139,18 @@ function _makePendingRow(index) {
   return div;
 }
 
-function _updateBar(done, total) {
-  const bar = document.getElementById('run-progress');
-  if (bar && total > 0 && !bar.classList.contains('indeterminate')) {
-    bar.style.width = `${Math.round((done / total) * 100)}%`;
+function _updateBar(container, runId, done, total) {
+  const bar = container.querySelector('.pb-inner');
+  const miniBar = container.querySelector('.run-mini-pb-inner');
+  if (total > 0) {
+    const pct = `${Math.round((done / total) * 100)}%`;
+    if (bar && !bar.classList.contains('indeterminate')) bar.style.width = pct;
+    if (miniBar) miniBar.style.width = pct;
   }
 }
 
-function _updateEta(done, total) {
-  const eta = document.getElementById('run-eta');
+function _updateEta(container, runId, done, total) {
+  const eta = container.querySelector('.run-eta');
   if (!eta) return;
   if (total > 0) {
     eta.textContent = `${done} / ${total} chunks`;
@@ -219,6 +223,8 @@ document.addEventListener('change', (e) => {
 document.addEventListener('click', (e) => {
   const queueBtn = e.target.closest('.btn-queue');
   const replaceBtn = e.target.closest('.btn-replace');
+  const playRunBtn = e.target.closest('.btn-play-run');
+  
   if (queueBtn) {
     document.dispatchEvent(new CustomEvent('oralis:playlist-add', {
       detail: { url: queueBtn.dataset.url, label: queueBtn.dataset.label }
@@ -227,6 +233,30 @@ document.addEventListener('click', (e) => {
     document.dispatchEvent(new CustomEvent('oralis:playlist-replace', {
       detail: { tracks: [{ url: replaceBtn.dataset.url, label: replaceBtn.dataset.label }] }
     }));
+  } else if (playRunBtn) {
+    const runId = playRunBtn.dataset.runId;
+    const container = document.getElementById(`run-container-${runId}`);
+    if (!container) return;
+    
+    // If we have a direct URL (finished run), use it to replace the whole queue
+    if (playRunBtn.dataset.url) {
+      document.dispatchEvent(new CustomEvent('oralis:playlist-replace', {
+        detail: { tracks: [{ url: playRunBtn.dataset.url, label: playRunBtn.dataset.label }] }
+      }));
+      return;
+    }
+
+    // Otherwise (unfinished run), gather ready chunks and enable auto-queue
+    const chunks = Array.from(container.querySelectorAll('.chunk-row:not(.chunk-pending):not(.chunk-synthesizing)'));
+    const tracks = chunks.map(row => {
+      const q = row.querySelector('.btn-queue');
+      return { url: q.dataset.url, label: q.dataset.label };
+    });
+    
+    if (tracks.length > 0) {
+      document.dispatchEvent(new CustomEvent('oralis:player-set-autoqueue', { detail: { value: true } }));
+      document.dispatchEvent(new CustomEvent('oralis:playlist-replace', { detail: { tracks } }));
+    }
   }
 });
 
@@ -240,5 +270,6 @@ document.addEventListener('htmx:afterSettle', () => {
 
 // Close live SSE stream before HTMX replaces the page content
 document.addEventListener('htmx:beforeSwap', () => {
-  if (_activeSSE) { _activeSSE.close(); _activeSSE = null; }
+  Object.values(_activeSSEs).forEach(es => es.close());
+  _activeSSEs = {};
 });

@@ -11,34 +11,8 @@
 </div>
 
 <div class="run-panel">
-  {% if has_final %}
-  <div class="final-audio">
-    <span>Full output</span>
-    <button class="btn-queue"
-      data-url="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download"
-      data-label="{{ project.name }} — Full output">+ Queue</button>
-    <button class="btn-replace"
-      data-url="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download"
-      data-label="{{ project.name }} — Full output">⏎ Replace</button>
-    <details class="dl-drop">
-      <summary>↓ download</summary>
-      <div class="dl-menu">
-        <a href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download">WAV</a>
-        {% if run.status.state == "done" %}
-        <a href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download-mp3"
-           title="Transcodes on first download">MP3</a>
-        <a href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/download-mp4"
-           title="Transcodes on first download">MP4</a>
-        {% endif %}
-      </div>
-    </details>
-  </div>
-  {% endif %}
-
-  <div class="slbl" style="margin-top:12px;">CHUNKS — {{ chunks | length }}</div>
-  <div class="chunk-list">
-    {% set r = run %}
-    {% for chunk in chunks %}{% include "run_chunk.html" %}{% endfor %}
-  </div>
+  {% set r = {"run": run, "chunks": chunks, "has_final": has_final} %}
+  {% set active_run_id = run.run_id %}
+  {% include "run_item.html" %}
 </div>
 {% endblock %}
