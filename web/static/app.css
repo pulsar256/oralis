@@ -186,6 +186,7 @@ body { font-family: system-ui, sans-serif; background: #0d1117; color: #e0e0e0; 
 .player-scrubber { height: 4px; background: #2a2a2a; border-radius: 2px; cursor: pointer; position: relative; }
 .player-scrubber:hover .player-scrub-fill { background: #6ab4ff; }
 .player-scrub-fill { height: 100%; background: #4a9eff; border-radius: 2px; width: 0; pointer-events: none; }
+.player-waveform { height: 48px; width: 100%; cursor: pointer; border-radius: 4px; display: block; }
 .player-time { font-size: 10px; color: #666; white-space: nowrap; flex-shrink: 0; font-variant-numeric: tabular-nums; }
 .player-row2 { display: flex; align-items: center; gap: 6px; overflow: hidden; }
 .player-up-next { font-size: 10px; color: #444; letter-spacing: .06em; white-space: nowrap; flex-shrink: 0; }

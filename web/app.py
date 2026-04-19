@@ -3,9 +3,12 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 import os
+import struct
 import subprocess
 import sys
+import wave
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -308,6 +311,60 @@ async def serve_file(slug: str, run_id: str, filename: str):
     return FileResponse(path)
 
 
+def _waveform_json(wav_path: Path) -> bytes:
+    sidecar = wav_path.with_suffix(".waveform.json")
+    if sidecar.exists():
+        return sidecar.read_bytes()
+    with wave.open(str(wav_path), "rb") as wf:
+        n_channels = wf.getnchannels()
+        sampwidth = wf.getsampwidth()
+        n_frames = wf.getnframes()
+        framerate = wf.getframerate()
+        duration = n_frames / framerate
+        n_buckets = 600
+        window = max(1, n_frames // n_buckets)
+        buckets = []
+        for i in range(n_buckets):
+            start = i * window
+            if start >= n_frames:
+                buckets.append(0.0)
+                continue
+            wf.setpos(start)
+            count = min(window, n_frames - start)
+            raw = wf.readframes(count)
+            if sampwidth == 2:
+                unpacked = struct.unpack(f"<{count * n_channels}h", raw)
+                ch0 = [unpacked[j * n_channels] / 32768.0 for j in range(count)]
+            elif sampwidth == 1:
+                ch0 = [(raw[j * n_channels] - 128) / 128.0 for j in range(count)]
+            else:
+                ch0 = [0.0] * count
+            rms = math.sqrt(sum(x * x for x in ch0) / len(ch0)) if ch0 else 0.0
+            buckets.append(rms)
+    peak = max(buckets) if buckets else 1.0
+    if peak > 0:
+        buckets = [v / peak for v in buckets]
+    result = json.dumps({"samples": buckets, "duration": duration}).encode()
+    sidecar.write_bytes(result)
+    return result
+
+
+@app.get("/projects/{slug}/runs/{run_id}/files/{filename}/waveform")
+async def serve_waveform(slug: str, run_id: str, filename: str):
+    if "/" in filename or "\\" in filename or ".." in filename:
+        raise HTTPException(403)
+    if not filename.endswith(".wav"):
+        raise HTTPException(403)
+    run_dir = (store.PROJECTS_DIR / slug / "runs" / run_id).resolve()
+    wav_path = (run_dir / filename).resolve()
+    if not wav_path.is_relative_to(run_dir):
+        raise HTTPException(403)
+    if not wav_path.is_file():
+        raise HTTPException(404)
+    data = await asyncio.get_running_loop().run_in_executor(None, _waveform_json, wav_path)
+    return Response(data, media_type="application/json")
+
+
 @app.get("/projects/{slug}/runs/{run_id}/chunks/{wav_name}/download-mp3")
 async def download_chunk_mp3(slug: str, run_id: str, wav_name: str):
     if "/" in wav_name or "\\" in wav_name or ".." in wav_name or not wav_name.endswith(".wav"):
@@ -365,6 +422,19 @@ async def download_chunk_mp4(slug: str, run_id: str, wav_name: str):
             raise HTTPException(500, f"Transcoding failed: {exc}") from exc
     stem = wav_name.replace(".wav", "")
     return FileResponse(mp4_path, filename=f"{slug}_{run_id}_{stem}.mp4", media_type="video/mp4")
+
+
+@app.get("/projects/{slug}/runs/{run_id}/download/waveform")
+async def download_waveform(slug: str, run_id: str):
+    run_dir = store.PROJECTS_DIR / slug / "runs" / run_id
+    wav_path = run_dir / "output.wav"
+    if not wav_path.exists():
+        wavs = sorted(run_dir.glob("output_?????.wav"))
+        if not wavs:
+            raise HTTPException(404)
+        wav_path = wavs[0]
+    data = await asyncio.get_running_loop().run_in_executor(None, _waveform_json, wav_path)
+    return Response(data, media_type="application/json")
 
 
 @app.get("/projects/{slug}/runs/{run_id}/download")

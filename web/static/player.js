@@ -9,9 +9,12 @@
   let currentIndex = -1;
   const audio = new Audio();
 
+  const waveformCache = {};   // url → {samples, duration}
+  const waveformFetches = {}; // url → Promise
+
   // DOM refs — populated on init
   let bar, playBtn, nextBtn, labelEl, timeEl, scrubber, scrubFill,
-      pillRow, clearBtn;
+      pillRow, clearBtn, waveformCanvas;
 
   function _saveState() {
     localStorage.setItem(PERSIST_KEY, JSON.stringify({
@@ -34,19 +37,24 @@
     audio.addEventListener('error', () => { _saveState(); }, { once: true });
     labelEl.textContent = queue[currentIndex].label;
     renderPills();
+    const restoredUrl = queue[currentIndex].url;
+    _fetchWaveform(restoredUrl).then(() => {
+      if (queue[currentIndex]?.url === restoredUrl) _showWaveform(restoredUrl);
+    });
   }
 
   function init() {
-    bar        = document.getElementById('player-bar');
+    bar           = document.getElementById('player-bar');
     if (!bar) return;
-    playBtn    = document.getElementById('player-play');
-    nextBtn    = document.getElementById('player-next');
-    labelEl    = document.getElementById('player-label');
-    timeEl     = document.getElementById('player-time');
-    scrubber   = document.getElementById('player-scrubber');
-    scrubFill  = document.getElementById('player-scrub-fill');
-    pillRow    = document.getElementById('player-pills');
-    clearBtn   = document.getElementById('player-clear');
+    playBtn       = document.getElementById('player-play');
+    nextBtn       = document.getElementById('player-next');
+    labelEl       = document.getElementById('player-label');
+    timeEl        = document.getElementById('player-time');
+    scrubber      = document.getElementById('player-scrubber');
+    scrubFill     = document.getElementById('player-scrub-fill');
+    pillRow       = document.getElementById('player-pills');
+    clearBtn      = document.getElementById('player-clear');
+    waveformCanvas = document.getElementById('player-waveform');
 
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('ended', onEnded);
@@ -57,6 +65,7 @@
     nextBtn.addEventListener('click', () => { playTrack(currentIndex + 1); });
     clearBtn.addEventListener('click', clearQueue);
     scrubber.addEventListener('click', onScrubClick);
+    waveformCanvas.addEventListener('click', onScrubClick);
 
     document.addEventListener('oralis:chunk-ready', (e) => { addTrack(e.detail); });
     document.addEventListener('oralis:playlist-add', (e) => { addTrack(e.detail); });
@@ -67,9 +76,71 @@
     _restoreState();
   }
 
+  function _fetchWaveform(url) {
+    if (waveformFetches[url]) return waveformFetches[url];
+    const p = fetch(url + '/waveform')
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (data && Array.isArray(data.samples)) waveformCache[url] = data;
+      })
+      .catch(() => {});
+    waveformFetches[url] = p;
+    return p;
+  }
+
+  function _showWaveform(url) {
+    const data = waveformCache[url];
+    if (!data) return;
+    waveformCanvas.style.display = 'block';
+    scrubber.style.display = 'none';
+    _drawWaveform(data, audio.currentTime, audio.duration);
+  }
+
+  function _showScrubber() {
+    waveformCanvas.style.display = 'none';
+    scrubber.style.display = '';
+  }
+
+  function _drawWaveform(data, currentTime, duration) {
+    const ctx = waveformCanvas.getContext('2d');
+    if (!ctx) return;
+    const dpr = window.devicePixelRatio || 1;
+    const w = waveformCanvas.offsetWidth;
+    const h = 48;
+    if (w === 0) return;
+    waveformCanvas.width = w * dpr;
+    waveformCanvas.height = h * dpr;
+    ctx.scale(dpr, dpr);
+
+    const samples = data.samples;
+    const barW = 2;
+    const gap = 2;
+    const step = barW + gap;
+    const n = Math.floor(w / step);
+
+    ctx.fillStyle = '#161b22';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.fillStyle = '#2d4a7a';
+    for (let i = 0; i < n; i++) {
+      const si = Math.floor(i / n * samples.length);
+      const amp = samples[si] || 0;
+      const barH = Math.max(1, amp * h * 0.9);
+      ctx.fillRect(i * step, (h - barH) / 2, barW, barH);
+    }
+
+    const pct = (duration && duration > 0) ? currentTime / duration : 0;
+    const playheadX = pct * w;
+    ctx.fillStyle = 'rgba(74, 158, 255, 0.25)';
+    ctx.fillRect(0, 0, playheadX, h);
+    ctx.fillStyle = '#4a9eff';
+    ctx.fillRect(playheadX, 0, 2, h);
+  }
+
   function addTrack(track) {
     if (queue.some(t => t.url === track.url)) return;
     queue.push(track);
+    _fetchWaveform(track.url);
     if (currentIndex === -1) {
       playTrack(0);
     } else {
@@ -92,11 +163,22 @@
   function playTrack(index) {
     if (index < 0 || index >= queue.length) return;
     currentIndex = index;
-    audio.src = queue[index].url;
+    const url = queue[index].url;
+    audio.src = url;
     audio.play().catch(() => {});
     labelEl.textContent = queue[index].label;
     renderPills();
     _saveState();
+
+    if (waveformCache[url]) {
+      _showWaveform(url);
+    } else {
+      _showScrubber();
+      const p = waveformFetches[url] || _fetchWaveform(url);
+      p.then(() => {
+        if (queue[currentIndex]?.url === url) _showWaveform(url);
+      });
+    }
   }
 
   function togglePlay() {
@@ -116,13 +198,18 @@
   function onTimeUpdate() {
     if (!audio.duration) return;
     const pct = (audio.currentTime / audio.duration) * 100;
-    scrubFill.style.width = pct + '%';
     timeEl.textContent = fmt(audio.currentTime) + ' / ' + fmt(audio.duration);
+    const url = queue[currentIndex]?.url;
+    if (url && waveformCache[url] && waveformCanvas.style.display !== 'none') {
+      _drawWaveform(waveformCache[url], audio.currentTime, audio.duration);
+    } else {
+      scrubFill.style.width = pct + '%';
+    }
   }
 
   function onScrubClick(e) {
     if (!audio.duration) return;
-    const rect = scrubber.getBoundingClientRect();
+    const rect = e.currentTarget.getBoundingClientRect();
     audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
   }
 
@@ -138,6 +225,7 @@
     playBtn.textContent = '▶';
     localStorage.removeItem(PERSIST_KEY);
     renderPills();
+    _showScrubber();
   }
 
   function renderPills() {
