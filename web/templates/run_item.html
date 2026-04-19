@@ -1,0 +1,99 @@
+<div class="run-item" id="run-container-{{ r.run.run_id }}">
+  <div class="run-header" onclick="toggleRun('{{ r.run.run_id }}', event)">
+    <span class="run-arrow" id="arrow-{{ r.run.run_id }}">▶</span>
+    <span class="run-label">Run {% if loop is defined %}#{{ loop.revindex }}{% else %}#{{ r.run.run_id.replace('T', ' ') }}{% endif %}</span>
+    <span class="run-speaker">{{ r.run.settings.speaker }}</span>
+    
+    <div class="run-header-progress">
+      <div class="run-mini-pb">
+        <div class="run-mini-pb-inner" id="mini-pb-{{ r.run.run_id }}" 
+             style="width: {{ (r.run.status.current_chunk / r.run.status.chunk_count * 100) if r.run.status.chunk_count else 0 }}%"></div>
+      </div>
+    </div>
+
+    <span class="run-status-pill {{ r.run.status.state }}" id="status-pill-{{ r.run.run_id }}">
+      {{ r.run.status.state }}
+    </span>
+
+    <div class="run-header-actions">
+      {% if r.run.status.state == "done" %}
+      <button class="btn-play-run"
+        data-run-id="{{ r.run.run_id }}"
+        data-url="/projects/{{ project.slug }}/runs/{{ r.run.run_id }}/download"
+        data-label="{{ project.name }} — Run {% if loop is defined %}#{{ loop.revindex }}{% else %}#{{ r.run.run_id.replace('T', ' ') }}{% endif %}">▶ Play</button>
+      {% else %}
+      <button class="btn-play-run"
+        data-run-id="{{ r.run.run_id }}"
+        title="Queue completed chunks and enable auto-queue">▶ Play</button>
+      {% endif %}
+
+      {% if r.run.status.state == "running" %}
+      <form method="post" action="/projects/{{ project.slug }}/runs/{{ r.run.run_id }}/cancel"
+            hx-post="/projects/{{ project.slug }}/runs/{{ r.run.run_id }}/cancel"
+            hx-target="#main" hx-select="#main" hx-swap="outerHTML" style="display:inline">
+        <button type="submit" class="btn-cancel" title="Stop synthesis">⏹ Stop</button>
+      </form>
+      <label class="run-autoqueue-label" title="Automatically add completed chunks from this run to the player queue. Only one run can autoqueue at a time." onclick="event.stopPropagation()">
+        <input type="checkbox" class="run-autoqueue-cb" data-run-id="{{ r.run.run_id }}"> autoqueue
+      </label>
+      {% elif r.run.status.state == "stopped" %}
+      <form method="post" action="/projects/{{ project.slug }}/runs/{{ r.run.run_id }}/resume"
+            hx-post="/projects/{{ project.slug }}/runs/{{ r.run.run_id }}/resume"
+            hx-target="#main" hx-select="#main" hx-swap="outerHTML" style="display:inline">
+        <button type="submit" class="btn-resume">▶ Resume</button>
+      </form>
+      {% endif %}
+
+      {% if r.run.status.state == "done" %}
+      <details class="dl-drop">
+        <summary class="btn-dl-trigger" title="Download audio files">↓ Download</summary>
+        <div class="dl-menu">
+          <a href="/projects/{{ project.slug }}/runs/{{ r.run.run_id }}/download">WAV</a>
+          <a href="/projects/{{ project.slug }}/runs/{{ r.run.run_id }}/download-mp3">MP3</a>
+          <a href="/projects/{{ project.slug }}/runs/{{ r.run.run_id }}/download-mp4">MP4</a>
+        </div>
+      </details>
+      {% endif %}
+
+      {% if r.run.status.state != "running" and r.run.status.state != "pending" %}
+      <form method="post" action="/projects/{{ project.slug }}/runs/{{ r.run.run_id }}/delete"
+            hx-post="/projects/{{ project.slug }}/runs/{{ r.run.run_id }}/delete"
+            hx-target="#main" hx-select="#main" hx-swap="outerHTML" style="display:inline">
+        <button type="submit" class="btn-delete" title="Delete this run and all its audio files" onclick="return confirm('Delete this run and all its audio files?')">✕</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="run-body" id="body-{{ r.run.run_id }}" style="display: none">
+    <div class="run-body-content">
+      <div class="run-info-line">
+        {{ r.run.settings.max_tokens }} txt-tok/chunk — cfg {{ r.run.settings.cfg_scale }} — {{ 'seed ' ~ r.run.settings.seed if r.run.settings.seed is not none and r.run.settings.seed != '' else 'random' }}
+        <span class="run-eta" id="run-eta-{{ r.run.run_id }}"></span>
+      </div>
+
+      <div class="pb-outer">
+        <div class="pb-inner {{ 'indeterminate' if r.run.status.state == 'running' and not r.run.status.chunk_count }}"
+             id="run-progress-{{ r.run.run_id }}" 
+             style="width: {{ (r.run.status.current_chunk / r.run.status.chunk_count * 100) if r.run.status.chunk_count else 0 }}%"></div>
+      </div>
+      
+      <div id="run-status-{{ r.run.run_id }}" class="run-status"></div>
+
+      <div class="chunk-list" id="chunk-list-{{ r.run.run_id }}">
+        {% set run = r.run %}
+        {% for chunk in r.chunks %}{% include "run_chunk.html" %}{% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% if r.run.status.state == "running" or r.run.status.state == "pending" %}
+  <script>
+  (function() {
+    function go() { initSSE("{{ project.slug }}", "{{ r.run.run_id }}", {{ project.name | tojson }}); }
+    if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', go); }
+    else { go(); }
+  })();
+  </script>
+  {% endif %}
+</div>

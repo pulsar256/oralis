@@ -7,7 +7,12 @@
   <button class="btn-replace"
     data-url="/projects/{{ project.slug }}/runs/{{ run.run_id }}/files/{{ chunk.wav_name }}"
     data-label="{{ project.name }} — Chunk {{ chunk.index }}">⏎ Replace</button>
-  <a class="dl"
-    href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/files/{{ chunk.wav_name }}"
-    download>↓</a>
+  <details class="dl-drop">
+    <summary class="btn-dl-trigger" title="Download chunk">↓ Download</summary>
+    <div class="dl-menu">
+      <a href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/files/{{ chunk.wav_name }}" download>WAV</a>
+      <a href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/chunks/{{ chunk.wav_name }}/download-mp3">MP3</a>
+      <a href="/projects/{{ project.slug }}/runs/{{ run.run_id }}/chunks/{{ chunk.wav_name }}/download-mp4">MP4</a>
+    </div>
+  </details>
 </div>

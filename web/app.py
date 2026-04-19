@@ -139,8 +139,6 @@ async def project_view(request: Request, slug: str):
                     store.update_status(slug, r.run_id, state="stopped")
                     r.status["state"] = "stopped"
 
-    active_run = next((r for r in all_runs if r.status["state"] in ("running", "pending", "stopped")), None)
-    
     # Prepare runs with their chunks and final audio status
     runs_data = []
     for r in all_runs:
@@ -164,7 +162,6 @@ async def project_view(request: Request, slug: str):
         preview_html=preview(project.source_text, steps),
         source_kb=round(len(project.source_text.encode()) / 1024, 1),
         runs=runs_data,
-        active_run_id=active_run.run_id if active_run else None,
     ))
 
 
@@ -309,6 +306,65 @@ async def serve_file(slug: str, run_id: str, filename: str):
     if not path.is_file():
         raise HTTPException(404)
     return FileResponse(path)
+
+
+@app.get("/projects/{slug}/runs/{run_id}/chunks/{wav_name}/download-mp3")
+async def download_chunk_mp3(slug: str, run_id: str, wav_name: str):
+    if "/" in wav_name or "\\" in wav_name or ".." in wav_name or not wav_name.endswith(".wav"):
+        raise HTTPException(403)
+    run_dir = (store.PROJECTS_DIR / slug / "runs" / run_id).resolve()
+    wav_path = (run_dir / wav_name).resolve()
+    if not wav_path.is_relative_to(run_dir) or not wav_path.is_file():
+        raise HTTPException(404)
+    mp3_path = run_dir / wav_name.replace(".wav", ".mp3")
+    if not mp3_path.exists():
+        def _transcode():
+            tmp = mp3_path.with_suffix(".mp3.tmp")
+            result = subprocess.run(
+                ["ffmpeg", "-y", "-loglevel", "error", "-i", str(wav_path),
+                 "-codec:a", "libmp3lame", "-q:a", "2", "-f", "mp3", str(tmp)],
+                capture_output=True,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(result.stderr.decode())
+            tmp.rename(mp3_path)
+        try:
+            await asyncio.get_running_loop().run_in_executor(None, _transcode)
+        except Exception as exc:
+            raise HTTPException(500, f"Transcoding failed: {exc}") from exc
+    stem = wav_name.replace(".wav", "")
+    return FileResponse(mp3_path, filename=f"{slug}_{run_id}_{stem}.mp3", media_type="audio/mpeg")
+
+
+@app.get("/projects/{slug}/runs/{run_id}/chunks/{wav_name}/download-mp4")
+async def download_chunk_mp4(slug: str, run_id: str, wav_name: str):
+    if "/" in wav_name or "\\" in wav_name or ".." in wav_name or not wav_name.endswith(".wav"):
+        raise HTTPException(403)
+    run_dir = (store.PROJECTS_DIR / slug / "runs" / run_id).resolve()
+    wav_path = (run_dir / wav_name).resolve()
+    if not wav_path.is_relative_to(run_dir) or not wav_path.is_file():
+        raise HTTPException(404)
+    mp4_path = run_dir / wav_name.replace(".wav", ".mp4")
+    if not mp4_path.exists():
+        def _transcode():
+            tmp = mp4_path.with_suffix(".mp4.tmp")
+            result = subprocess.run(
+                ["ffmpeg", "-y", "-loglevel", "error",
+                 "-f", "lavfi", "-i", "color=c=#111111:s=320x40:r=1",
+                 "-i", str(wav_path),
+                 "-shortest", "-c:v", "libx264", "-tune", "stillimage",
+                 "-c:a", "aac", "-b:a", "192k", "-f", "mp4", str(tmp)],
+                capture_output=True,
+            )
+            if result.returncode != 0:
+                raise RuntimeError(result.stderr.decode())
+            tmp.rename(mp4_path)
+        try:
+            await asyncio.get_running_loop().run_in_executor(None, _transcode)
+        except Exception as exc:
+            raise HTTPException(500, f"Transcoding failed: {exc}") from exc
+    stem = wav_name.replace(".wav", "")
+    return FileResponse(mp4_path, filename=f"{slug}_{run_id}_{stem}.mp4", media_type="video/mp4")
 
 
 @app.get("/projects/{slug}/runs/{run_id}/download")

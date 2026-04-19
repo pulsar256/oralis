@@ -2,17 +2,15 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'oralis_player_auto_queue';
   const MAX_VISIBLE_PILLS = 4;
 
   let queue = [];          // [{url, label}]
   let currentIndex = -1;
-  let autoQueue = localStorage.getItem(STORAGE_KEY) !== 'false';
   const audio = new Audio();
 
   // DOM refs — populated on init
   let bar, playBtn, nextBtn, labelEl, timeEl, scrubber, scrubFill,
-      autoToggle, pillRow, clearBtn;
+      pillRow, clearBtn;
 
   function init() {
     bar        = document.getElementById('player-bar');
@@ -23,11 +21,8 @@
     timeEl     = document.getElementById('player-time');
     scrubber   = document.getElementById('player-scrubber');
     scrubFill  = document.getElementById('player-scrub-fill');
-    autoToggle = document.getElementById('player-auto-queue');
     pillRow    = document.getElementById('player-pills');
     clearBtn   = document.getElementById('player-clear');
-
-    autoToggle.checked = autoQueue;
 
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('ended', onEnded);
@@ -38,25 +33,10 @@
     nextBtn.addEventListener('click', () => { playTrack(currentIndex + 1); });
     clearBtn.addEventListener('click', clearQueue);
     scrubber.addEventListener('click', onScrubClick);
-    autoToggle.addEventListener('change', () => {
-      autoQueue = autoToggle.checked;
-      localStorage.setItem(STORAGE_KEY, String(autoQueue));
-    });
 
-    document.addEventListener('oralis:chunk-ready', (e) => {
-      if (autoQueue) addTrack(e.detail);
-    });
-    document.addEventListener('oralis:playlist-add', (e) => {
-      addTrack(e.detail);
-    });
-    document.addEventListener('oralis:playlist-replace', (e) => {
-      replaceQueue(e.detail.tracks);
-    });
-    document.addEventListener('oralis:player-set-autoqueue', (e) => {
-      autoQueue = !!e.detail.value;
-      if (autoToggle) autoToggle.checked = autoQueue;
-      localStorage.setItem(STORAGE_KEY, String(autoQueue));
-    });
+    document.addEventListener('oralis:chunk-ready', (e) => { addTrack(e.detail); });
+    document.addEventListener('oralis:playlist-add', (e) => { addTrack(e.detail); });
+    document.addEventListener('oralis:playlist-replace', (e) => { replaceQueue(e.detail.tracks); });
 
     // Re-show bar after HTMX navigation if queue is non-empty
     document.addEventListener('htmx:afterSettle', () => {

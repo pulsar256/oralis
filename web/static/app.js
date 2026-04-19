@@ -1,6 +1,7 @@
 // web/static/app.js
 
 let _activeSSEs = {};
+let _autoqueueRunId = null;
 
 function initSSE(slug, runId, projectName) {
   if (_activeSSEs[runId]) { _activeSSEs[runId].close(); }
@@ -61,7 +62,7 @@ function initSSE(slug, runId, projectName) {
     }
     
     const queueBtn = newRow.querySelector('.btn-queue');
-    if (queueBtn) {
+    if (queueBtn && _autoqueueRunId === runId) {
       document.dispatchEvent(new CustomEvent('oralis:chunk-ready', {
         detail: { url: queueBtn.dataset.url, label: queueBtn.dataset.label }
       }));
@@ -94,7 +95,7 @@ function initSSE(slug, runId, projectName) {
     
     if (data.state === 'done') {
         const trackLabel = (projectName || slug) + ' \u2014 Full output';
-        
+
         // Update the header Play button to point to the final audio
         const playBtn = container.querySelector('.btn-play-run');
         if (playBtn) {
@@ -102,11 +103,51 @@ function initSSE(slug, runId, projectName) {
             playBtn.dataset.label = trackLabel;
             playBtn.removeAttribute('title');
         }
-        
-        document.dispatchEvent(new CustomEvent('oralis:chunk-ready', {
-          detail: { url: data.final_url, label: trackLabel }
-        }));
+
+        if (_autoqueueRunId === runId) {
+          document.dispatchEvent(new CustomEvent('oralis:chunk-ready', {
+            detail: { url: data.final_url, label: trackLabel }
+          }));
+        }
     }
+
+    const cancelBtn = container.querySelector('.btn-cancel');
+    if (cancelBtn) cancelBtn.closest('form').remove();
+
+    const autoqueueLabel = container.querySelector('.run-autoqueue-label');
+    if (autoqueueLabel) autoqueueLabel.remove();
+    if (_autoqueueRunId === runId) _autoqueueRunId = null;
+
+    const actions = container.querySelector('.run-header-actions');
+    if (data.state === 'done') {
+        const dlDrop = document.createElement('details');
+        dlDrop.className = 'dl-drop';
+        dlDrop.innerHTML =
+            `<summary class="btn-dl-trigger" title="Download audio files">↓ Download</summary>` +
+            `<div class="dl-menu">` +
+            `<a href="/projects/${slug}/runs/${runId}/download">WAV</a>` +
+            `<a href="/projects/${slug}/runs/${runId}/download-mp3">MP3</a>` +
+            `<a href="/projects/${slug}/runs/${runId}/download-mp4">MP4</a>` +
+            `</div>`;
+        actions.appendChild(dlDrop);
+    }
+    const deleteForm = document.createElement('form');
+    deleteForm.method = 'post';
+    deleteForm.action = `/projects/${slug}/runs/${runId}/delete`;
+    deleteForm.style.display = 'inline';
+    deleteForm.setAttribute('hx-post', `/projects/${slug}/runs/${runId}/delete`);
+    deleteForm.setAttribute('hx-target', '#main');
+    deleteForm.setAttribute('hx-select', '#main');
+    deleteForm.setAttribute('hx-swap', 'outerHTML');
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'submit';
+    deleteBtn.className = 'btn-delete';
+    deleteBtn.title = 'Delete this run and all its audio files';
+    deleteBtn.addEventListener('click', (ev) => { if (!confirm('Delete this run and all its audio files?')) ev.preventDefault(); });
+    deleteBtn.textContent = '✕';
+    deleteForm.appendChild(deleteBtn);
+    actions.appendChild(deleteForm);
+    htmx.process(deleteForm);
   });
 
   es.onerror = () => { es.close(); delete _activeSSEs[runId]; };
@@ -246,15 +287,20 @@ document.addEventListener('click', (e) => {
       return;
     }
 
-    // Otherwise (unfinished run), gather ready chunks and enable auto-queue
+    // Otherwise (unfinished run), arm autoqueue for this run and load ready chunks
+    const autoqueueCb = container.querySelector('.run-autoqueue-cb');
+    if (autoqueueCb && !autoqueueCb.checked) {
+      autoqueueCb.checked = true;
+      autoqueueCb.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
     const chunks = Array.from(container.querySelectorAll('.chunk-row:not(.chunk-pending):not(.chunk-synthesizing)'));
     const tracks = chunks.map(row => {
       const q = row.querySelector('.btn-queue');
       return { url: q.dataset.url, label: q.dataset.label };
     });
-    
+
     if (tracks.length > 0) {
-      document.dispatchEvent(new CustomEvent('oralis:player-set-autoqueue', { detail: { value: true } }));
       document.dispatchEvent(new CustomEvent('oralis:playlist-replace', { detail: { tracks } }));
     }
   }
@@ -268,8 +314,24 @@ document.addEventListener('htmx:afterSettle', () => {
   });
 });
 
+// Per-run autoqueue mutual exclusion
+document.addEventListener('change', (e) => {
+  const cb = e.target.closest('.run-autoqueue-cb');
+  if (!cb) return;
+  const runId = cb.dataset.runId;
+  if (cb.checked) {
+    document.querySelectorAll('.run-autoqueue-cb').forEach(other => {
+      if (other !== cb) other.checked = false;
+    });
+    _autoqueueRunId = runId;
+  } else {
+    if (_autoqueueRunId === runId) _autoqueueRunId = null;
+  }
+});
+
 // Close live SSE stream before HTMX replaces the page content
 document.addEventListener('htmx:beforeSwap', () => {
   Object.values(_activeSSEs).forEach(es => es.close());
   _activeSSEs = {};
+  _autoqueueRunId = null;
 });

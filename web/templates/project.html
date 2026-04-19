@@ -60,7 +60,9 @@
     <!-- Right: synthesis settings -->
     <div class="col-right">
       <div class="slbl">SYNTHESIS SETTINGS</div>
-      <form method="post" action="/projects/{{ project.slug }}/runs">
+      <form method="post" action="/projects/{{ project.slug }}/runs"
+            hx-post="/projects/{{ project.slug }}/runs"
+            hx-target="#main" hx-select="#main" hx-swap="outerHTML">
         <input type="hidden" name="slug" value="{{ project.slug }}">
         <div class="synth-fields">
           <div class="synth-row">
