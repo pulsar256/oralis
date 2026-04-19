@@ -73,6 +73,10 @@
     audio.pause();
     queue = tracks.slice();
     currentIndex = -1;
+    if (queue.length === 0) {
+      clearQueue();
+      return;
+    }
     playTrack(0);
     showBar();
   }
@@ -114,7 +118,8 @@
 
   function clearQueue() {
     audio.pause();
-    audio.src = '';
+    audio.removeAttribute('src');
+    audio.load();
     queue = [];
     currentIndex = -1;
     labelEl.textContent = '';
@@ -129,7 +134,7 @@
     pillRow.innerHTML = '';
     if (queue.length === 0) return;
 
-    // Show a window of MAX_VISIBLE_PILLS pills centred around currentIndex
+    // Show up to MAX_VISIBLE_PILLS pills: 1 before currentIndex and up to 3 ahead
     const start = Math.max(0, currentIndex - 1);
     const end   = Math.min(queue.length, start + MAX_VISIBLE_PILLS);
 
