@@ -10,6 +10,8 @@ body { font-family: system-ui, sans-serif; background: #0d1117; color: #e0e0e0; 
 #sidebar a.proj.active { background: #1e2d3d; border-left: 2px solid #4a9eff; color: #e0e0e0; }
 #sidebar a.new-proj { margin-top: auto; border: 1px dashed #333; border-radius: 3px; padding: 5px; font-size: 12px; color: #555; text-align: center; text-decoration: none; display: block; }
 #sidebar a.new-proj:hover { color: #4a9eff; border-color: #4a9eff; }
+#sidebar a.github-link { margin-top: 5px; font-size: 11px; color: #444; text-align: center; text-decoration: none; display: block; }
+#sidebar a.github-link:hover { color: #8b949e; text-decoration: underline; }
 
 .proj-item { display: flex; align-items: center; gap: 3px; }
 .proj-delete-form { display: contents; }

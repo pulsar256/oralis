@@ -136,7 +136,9 @@ bash download_experimental_voices.sh
 
 ## CLI
 
-The CLI is available for scripting and batch use outside the Studio.
+Both components are available as console scripts for automation and batch use.
+
+### Synthesis (`oralis`)
 
 ```bash
 uv run --extra rocm oralis "Hello World"
@@ -144,22 +146,37 @@ uv run --extra rocm oralis --input script.txt --speaker en-breeze_woman --output
 echo "Good morning" | uv run --extra rocm oralis
 ```
 
-Output is written as numbered chunks (`output_00001.wav`, `output_00002.wav`, …) then concatenated into the final file. Existing chunks are skipped on re-run.
+| Flag | Default | Effect |
+|------|---------|--------|
+| `text` | *(none)* | Positional argument: the text to synthesize. |
+| `-i`, `--input FILE` | *(none)* | Path to a `.txt` file to read. |
+| `-o`, `--output PATH`| `output.wav` | Final output WAV path. |
+| `--speaker NAME` | `en-breeze_woman` | Voice preset name. Use `--list-voices` to see all. |
+| `--model MODEL` | `microsoft/VibeVoice-Realtime-0.5B` | HuggingFace model path or local directory. |
+| `--device DEVICE` | `auto` | Force device: `cuda`, `rocm`, `mps`, or `cpu`. |
+| `--cfg-scale F` | `1.5` | Classifier-free guidance strength. Higher follows text strictly; lower sounds more natural but riskier. |
+| `--max-tokens N` | `512` | Maximum text tokens per synthesis chunk. |
+| `--seed N` | *(unset)* | Fixed seed for reproducible output. |
+| `--list-voices` | *(none)* | Print available voice preset names and exit. |
+| `--progress-file PATH`| *(none)* | Write JSON progress (`chunk_count`, `current_chunk`) to this file. |
 
-| Flag             | Default   | Effect                                                                                                                                                               |
-|------------------|-----------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `--max-tokens N` | `512`     | Maximum text tokens per synthesis chunk. Smaller values use less VRAM and produce shorter audio segments; larger values may improve prosody across longer sentences. |
-| `--cfg-scale F`  | `1.5`     | Classifier-free guidance strength. Higher values follow the text more strictly; lower values sound more natural but increase the risk of audio artifacts.             |
-| `--seed N`       | *(unset)* | Fixed seed for reproducible output. Omit for non-deterministic synthesis.                                                                                            |
+**Output Handling:** Audio is written as numbered chunks (`output_00001.wav`, `output_00002.wav`, …) then concatenated into the final file. Existing chunks are skipped on re-run, allowing automatic resume.
 
-Text preprocessing is also available standalone:
+### Preprocessing (`preprocess-text`)
 
 ```bash
-uv run --extra rocm preprocess-text --input article.txt
-echo "z. B. Abb. 1.1" | uv run --extra rocm preprocess-text
+uv run --extra rocm preprocess-text "z. B. Abb. 1.1"
+uv run --extra rocm preprocess-text --input article.txt --strip-formatting
 ```
 
-Edit `config/abbr.json` to add or override German abbreviation expansions — no code changes needed.
+| Flag | Default | Effect |
+|------|---------|--------|
+| `text` | *(none)* | Positional argument: the text to normalize. |
+| `-i`, `--input FILE` | *(none)* | Path to a `.txt` file to read. |
+| `-o`, `--output FILE`| *(stdout)* | Write result to a file instead of printing to terminal. |
+| `--expand-abbreviations` | `false` | Expand German abbreviations (e.g., `Abb.` → `Abbildung`) using `config/abbr.json`. |
+| `--expand-section-numbers` | `false` | Expand dotted section numbers (e.g., `1.1` → `eins punkt eins`). |
+| `--strip-formatting` | `false` | Strip Markdown, code blocks, HTML tags, and URLs before normalizing. |
 
 ## License
 
