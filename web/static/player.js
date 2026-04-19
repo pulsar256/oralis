@@ -60,6 +60,7 @@
   }
 
   function addTrack(track) {
+    if (queue.some(t => t.url === track.url)) return;
     queue.push(track);
     if (currentIndex === -1) {
       playTrack(0);
