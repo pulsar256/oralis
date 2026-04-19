@@ -9,7 +9,7 @@ The primary use case and motivation to create this was the lack of local first t
 > [!WARNING]
 > This is a personal tool, not a production service. It is mostly vibe-coded and it takes shortcuts (direct filesystem project management, no auth). Do not expose it to the public internet. Use for your pesonal amusement only.
 
-![img_1.png](docs/img.png)
+![screenshot](docs/screenshot.png)
 
 ## Getting Started
 
