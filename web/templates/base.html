@@ -19,6 +19,7 @@
            hx-get="/projects/{{ p.slug }}"
            hx-target="#main"
            hx-select="#main"
+           hx-swap="outerHTML"
            hx-push-url="true">{{ p.name }}</a>
         <button class="btn-proj-action btn-proj-rename" onclick="startRename('{{ p.slug }}')" title="Rename">✎</button>
         <form class="proj-delete-form" method="post" action="/projects/{{ p.slug }}/delete">
