@@ -198,6 +198,41 @@ function _updateEta(container, runId, done, total) {
   }
 }
 
+function startRunRename(el, event) {
+  event.stopPropagation();
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'run-label-input';
+  input.value = el.textContent.trim();
+  input.style.width = Math.max(el.offsetWidth, 80) + 'px';
+  el.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let done = false;
+  function commit() {
+    if (done) return;
+    done = true;
+    const name = input.value.trim();
+    fetch(`/projects/${el.dataset.slug}/runs/${el.dataset.runId}/rename`, {
+      method: 'POST',
+      body: new URLSearchParams({ name }),
+    });
+    el.textContent = name || el.dataset.default;
+    input.replaceWith(el);
+  }
+  function cancel() {
+    if (done) return;
+    done = true;
+    input.replaceWith(el);
+  }
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter')  { e.preventDefault(); commit(); }
+    if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  });
+  input.addEventListener('blur', commit);
+}
+
 function confirmDeleteProject(btn) {
   return confirm('Delete "' + btn.dataset.name + '" and all its audio files?');
 }
@@ -263,16 +298,11 @@ document.addEventListener('change', (e) => {
 // Playlist button delegation
 document.addEventListener('click', (e) => {
   const queueBtn = e.target.closest('.btn-queue');
-  const replaceBtn = e.target.closest('.btn-replace');
   const playRunBtn = e.target.closest('.btn-play-run');
-  
+
   if (queueBtn) {
     document.dispatchEvent(new CustomEvent('oralis:playlist-add', {
       detail: { url: queueBtn.dataset.url, label: queueBtn.dataset.label }
-    }));
-  } else if (replaceBtn) {
-    document.dispatchEvent(new CustomEvent('oralis:playlist-replace', {
-      detail: { tracks: [{ url: replaceBtn.dataset.url, label: replaceBtn.dataset.label }] }
     }));
   } else if (playRunBtn) {
     const runId = playRunBtn.dataset.runId;

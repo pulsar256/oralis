@@ -122,6 +122,16 @@ def rename_project(slug: str, new_name: str) -> None:
     (d / "project.json").write_text(json.dumps(meta), encoding="utf-8")
 
 
+def rename_run(slug: str, run_id: str, name: str) -> None:
+    path = _run_dir(slug, run_id) / "settings.json"
+    settings = json.loads(path.read_text())
+    if name:
+        settings["name"] = name
+    else:
+        settings.pop("name", None)
+    path.write_text(json.dumps(settings, indent=2))
+
+
 def delete_run(slug: str, run_id: str) -> None:
     shutil.rmtree(_run_dir(slug, run_id), ignore_errors=True)
 

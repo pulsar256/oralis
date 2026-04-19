@@ -470,6 +470,14 @@ async def rename_project_route(slug: str, name: str = Form(...)):
     return RedirectResponse(f"/projects/{slug}", status_code=303)
 
 
+@app.post("/projects/{slug}/runs/{run_id}/rename")
+async def rename_run_route(slug: str, run_id: str, name: str = Form(...)):
+    if not store.get_run(slug, run_id):
+        raise HTTPException(404)
+    store.rename_run(slug, run_id, name.strip())
+    return Response(status_code=204)
+
+
 @app.post("/projects/{slug}/runs/{run_id}/cancel")
 async def cancel_run(slug: str, run_id: str):
     if not store.get_run(slug, run_id):

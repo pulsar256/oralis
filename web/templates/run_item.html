@@ -1,7 +1,12 @@
 <div class="run-item" id="run-container-{{ r.run.run_id }}">
   <div class="run-header" onclick="toggleRun('{{ r.run.run_id }}', event)">
     <span class="run-arrow" id="arrow-{{ r.run.run_id }}">▶</span>
-    <span class="run-label">Run {% if loop is defined %}#{{ loop.revindex }}{% else %}#{{ r.run.run_id.replace('T', ' ') }}{% endif %}</span>
+    <span class="run-label run-label-editable"
+          data-run-id="{{ r.run.run_id }}"
+          data-slug="{{ project.slug }}"
+          data-default="Run {% if loop is defined %}#{{ loop.revindex }}{% else %}{{ r.run.run_id.replace('T', ' ') }}{% endif %}"
+          onclick="startRunRename(this, event)"
+          title="Click to rename">{% if r.run.settings.name %}{{ r.run.settings.name }}{% elif loop is defined %}Run #{{ loop.revindex }}{% else %}Run {{ r.run.run_id.replace('T', ' ') }}{% endif %}</span>
     <span class="run-speaker">{{ r.run.settings.speaker }}</span>
     
     <div class="run-header-progress">

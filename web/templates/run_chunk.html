@@ -4,9 +4,6 @@
   <button class="btn-queue"
     data-url="/projects/{{ project.slug }}/runs/{{ run.run_id }}/files/{{ chunk.wav_name }}"
     data-label="{{ project.name }} — Chunk {{ chunk.index }}">+ Queue</button>
-  <button class="btn-replace"
-    data-url="/projects/{{ project.slug }}/runs/{{ run.run_id }}/files/{{ chunk.wav_name }}"
-    data-label="{{ project.name }} — Chunk {{ chunk.index }}">⏎ Replace</button>
   <details class="dl-drop">
     <summary class="btn-dl-trigger" title="Download chunk">↓ Download</summary>
     <div class="dl-menu">

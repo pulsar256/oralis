@@ -72,6 +72,10 @@ body { font-family: system-ui, sans-serif; background: #0d1117; color: #e0e0e0; 
 
 .run-arrow { font-size: 10px; color: #555; width: 12px; text-align: center; }
 .run-label { font-size: 12px; font-weight: 600; color: #e0e0e0; min-width: 60px; }
+.run-label-editable { cursor: text; }
+.run-label-editable:hover { text-decoration: underline; text-decoration-style: dotted; text-decoration-color: #555; }
+.run-label-editable:hover::after { content: ' ✎'; font-size: 9px; color: #666; }
+.run-label-input { background: none; border: none; border-bottom: 1px solid #4a9eff; color: #e0e0e0; font-size: 12px; font-weight: 600; font-family: inherit; outline: none; padding: 0; min-width: 60px; }
 .run-speaker { font-size: 11px; color: #888; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .run-header-progress { width: 80px; flex-shrink: 0; }
