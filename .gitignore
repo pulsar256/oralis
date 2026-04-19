@@ -175,5 +175,6 @@ tags
 /checkpoints/
 exp
 .gradio/
-experimental_voices.superpowers/
+experimental_voices/
+.superpowers/
 .worktrees/
