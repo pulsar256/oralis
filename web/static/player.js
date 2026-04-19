@@ -3,6 +3,7 @@
   'use strict';
 
   const MAX_VISIBLE_PILLS = 4;
+  const PERSIST_KEY = 'oralis_player_state';
 
   let queue = [];          // [{url, label}]
   let currentIndex = -1;
@@ -11,6 +12,29 @@
   // DOM refs — populated on init
   let bar, playBtn, nextBtn, labelEl, timeEl, scrubber, scrubFill,
       pillRow, clearBtn;
+
+  function _saveState() {
+    localStorage.setItem(PERSIST_KEY, JSON.stringify({
+      queue,
+      currentIndex,
+      currentTime: audio.currentTime,
+    }));
+  }
+
+  function _restoreState() {
+    let saved;
+    try { saved = JSON.parse(localStorage.getItem(PERSIST_KEY)); } catch (_) {}
+    if (!saved || !Array.isArray(saved.queue) || saved.queue.length === 0) return;
+    queue = saved.queue;
+    currentIndex = saved.currentIndex ?? 0;
+    const t = saved.currentTime || 0;
+    if (currentIndex < 0 || currentIndex >= queue.length) currentIndex = 0;
+    audio.src = queue[currentIndex].url;
+    audio.addEventListener('canplay', () => { audio.currentTime = t; }, { once: true });
+    audio.addEventListener('error', () => { _saveState(); }, { once: true });
+    labelEl.textContent = queue[currentIndex].label;
+    renderPills();
+  }
 
   function init() {
     bar        = document.getElementById('player-bar');
@@ -27,7 +51,7 @@
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('ended', onEnded);
     audio.addEventListener('play',  () => { playBtn.textContent = '⏸'; });
-    audio.addEventListener('pause', () => { playBtn.textContent = '▶'; });
+    audio.addEventListener('pause', () => { playBtn.textContent = '▶'; _saveState(); });
 
     playBtn.addEventListener('click', togglePlay);
     nextBtn.addEventListener('click', () => { playTrack(currentIndex + 1); });
@@ -38,9 +62,9 @@
     document.addEventListener('oralis:playlist-add', (e) => { addTrack(e.detail); });
     document.addEventListener('oralis:playlist-replace', (e) => { replaceQueue(e.detail.tracks); });
 
-    // Re-show bar after HTMX navigation if queue is non-empty
-    document.addEventListener('htmx:afterSettle', () => {
-    });
+    window.addEventListener('beforeunload', _saveState);
+
+    _restoreState();
   }
 
   function addTrack(track) {
@@ -50,6 +74,7 @@
       playTrack(0);
     } else {
       renderPills();
+      _saveState();
     }
   }
 
@@ -71,6 +96,7 @@
     audio.play().catch(() => {});
     labelEl.textContent = queue[index].label;
     renderPills();
+    _saveState();
   }
 
   function togglePlay() {
@@ -83,6 +109,7 @@
       playTrack(currentIndex + 1);
     } else {
       playBtn.textContent = '▶';
+      _saveState();
     }
   }
 
@@ -109,6 +136,7 @@
     timeEl.textContent = '';
     scrubFill.style.width = '0%';
     playBtn.textContent = '▶';
+    localStorage.removeItem(PERSIST_KEY);
     renderPills();
   }
 
