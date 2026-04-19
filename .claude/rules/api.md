@@ -20,3 +20,20 @@
 
 - To reset an `<audio>` element cleanly: `audio.removeAttribute('src'); audio.load()`
   (`audio.src = ''` causes a spurious network error in the console)
+
+- All state-mutating forms (create run, stop, resume, delete) use HTMX partial swap:
+  `hx-post="..." hx-target="#main" hx-select="#main" hx-swap="outerHTML"`.
+  The player bar lives outside `#main` in `base.html` and survives all swaps.
+
+- Dynamically-created elements with `hx-*` attributes need `htmx.process(el)` after
+  appending to the DOM, or HTMX will not register them.
+
+- Simple state saves (rename, etc.) that don't require a page re-render should use a
+  plain `fetch()` POST returning 204, not HTMX. Update the DOM in JS directly.
+
+- Audio is served via two URL patterns: chunk files at `.../files/{filename}` and the
+  final concatenated output at `.../download`. Any feature handling audio (waveform,
+  download, etc.) must implement both routes — they resolve to different files on disk.
+
+- CPU/IO-bound work in FastAPI routes runs in a thread executor to avoid blocking the
+  event loop: `await asyncio.get_running_loop().run_in_executor(None, fn)`
