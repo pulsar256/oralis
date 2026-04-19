@@ -24,5 +24,11 @@
 </div>
 <div id="final-audio-container"></div>
 {% if run.status.state == "running" or run.status.state == "pending" %}
-<script>initSSE("{{ project.slug }}", "{{ run.run_id }}", {{ project.name | tojson }});</script>
+<script>
+(function() {
+  function go() { initSSE("{{ project.slug }}", "{{ run.run_id }}", {{ project.name | tojson }}); }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', go); }
+  else { go(); }
+})();
+</script>
 {% endif %}
