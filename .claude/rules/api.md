@@ -37,3 +37,18 @@
 
 - CPU/IO-bound work in FastAPI routes runs in a thread executor to avoid blocking the
   event loop: `await asyncio.get_running_loop().run_in_executor(None, fn)`
+
+- EventSource `onerror` must be a no-op (`es.onerror = () => {}`). The `done` handler
+  calls `es.close()` to prevent reconnects after success. Calling `es.close()` in `onerror`
+  permanently kills the stream before the buffered `done` event is dispatched — a race on
+  clean server close that leaves the UI stuck in the last known state.
+
+- `htmx:beforeSwap` must guard on the swap target before closing SSE streams:
+  `if (e.detail.target?.id !== 'main') return;`
+  Any targeted HTMX swap (e.g. `hx-target="#full-text-body"`) fires the same event and
+  would otherwise kill all active synthesis streams.
+
+- In `stream_chunks`, do not add a wav to `seen` or emit a `chunk` event until its sibling
+  `.txt` file exists. Read the txt in the same poll cycle it appears; defer to the next poll
+  if it is missing. This prevents empty snippet fields caused by detecting the wav before
+  the txt write completes.
