@@ -11,11 +11,16 @@
 <body>
   <div id="layout">
     <nav id="sidebar">
+      <a href="/" id="brand">
+        <h1>ORALIS</h1>
+        <div class="sub">STUDIO</div>
+      </a>
       <div class="lbl">PROJECTS</div>
       {% for p in projects %}
       <div class="proj-item" data-slug="{{ p.slug }}">
         <a href="/projects/{{ p.slug }}"
            class="proj proj-link {{ 'active' if active_slug == p.slug }}"
+           title="{{ p.name | e }}"
            hx-get="/projects/{{ p.slug }}"
            hx-target="#main"
            hx-select="#main"

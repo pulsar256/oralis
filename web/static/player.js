@@ -13,7 +13,7 @@
   const waveformFetches = {}; // url → Promise
 
   // DOM refs — populated on init
-  let bar, playBtn, nextBtn, labelEl, timeEl, scrubber, scrubFill,
+  let bar, playBtn, prevBtn, nextBtn, labelEl, timeEl, scrubber, scrubFill,
       pillRow, clearBtn, waveformCanvas;
 
   function _saveState() {
@@ -43,10 +43,19 @@
     });
   }
 
+  function _updateControlState() {
+    if (!playBtn) return;
+    const hasItems = queue.length > 0;
+    playBtn.disabled = !hasItems;
+    prevBtn.disabled = !hasItems;
+    nextBtn.disabled = !hasItems;
+  }
+
   function init() {
     bar           = document.getElementById('player-bar');
     if (!bar) return;
     playBtn       = document.getElementById('player-play');
+    prevBtn       = document.getElementById('player-prev');
     nextBtn       = document.getElementById('player-next');
     labelEl       = document.getElementById('player-label');
     timeEl        = document.getElementById('player-time');
@@ -58,10 +67,11 @@
 
     audio.addEventListener('timeupdate', onTimeUpdate);
     audio.addEventListener('ended', onEnded);
-    audio.addEventListener('play',  () => { playBtn.textContent = '⏸'; });
-    audio.addEventListener('pause', () => { playBtn.textContent = '▶'; _saveState(); });
+    audio.addEventListener('play',  () => { playBtn.setAttribute('data-icon', '⏸'); });
+    audio.addEventListener('pause', () => { playBtn.setAttribute('data-icon', '▶'); _saveState(); });
 
     playBtn.addEventListener('click', togglePlay);
+    prevBtn.addEventListener('click', skipPrev);
     nextBtn.addEventListener('click', () => { playTrack(currentIndex + 1); });
     clearBtn.addEventListener('click', clearQueue);
     scrubber.addEventListener('click', onScrubClick);
@@ -74,6 +84,7 @@
     window.addEventListener('beforeunload', _saveState);
 
     _restoreState();
+    _updateControlState();
   }
 
   function _fetchWaveform(url) {
@@ -147,6 +158,7 @@
       renderPills();
       _saveState();
     }
+    _updateControlState();
   }
 
   function replaceQueue(tracks) {
@@ -158,6 +170,7 @@
       return;
     }
     playTrack(0);
+    _updateControlState();
   }
 
   function playTrack(index) {
@@ -184,6 +197,16 @@
   function togglePlay() {
     if (audio.paused) audio.play().catch(() => {});
     else audio.pause();
+  }
+
+  function skipPrev() {
+    if (audio.currentTime > 3) {
+      audio.currentTime = 0;
+    } else if (currentIndex > 0) {
+      playTrack(currentIndex - 1);
+    } else {
+      audio.currentTime = 0;
+    }
   }
 
   function onEnded() {
@@ -222,10 +245,11 @@
     labelEl.textContent = '';
     timeEl.textContent = '';
     scrubFill.style.width = '0%';
-    playBtn.textContent = '▶';
+    playBtn.setAttribute('data-icon', '▶');
     localStorage.removeItem(PERSIST_KEY);
     renderPills();
     _showScrubber();
+    _updateControlState();
   }
 
   function renderPills() {
