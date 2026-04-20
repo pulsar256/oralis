@@ -160,9 +160,11 @@ async def stream_chunks(run_dir: Path, poll_interval: float = 1.0) -> AsyncItera
         # Poll for newly completed .wav files
         for wav in sorted(run_dir.glob("output_?????.wav")):
             if wav.name not in seen:
-                seen.add(wav.name)
                 txt = wav.with_suffix(".txt")
-                snippet = txt.read_text(encoding="utf-8")[:120] if txt.exists() else ""
+                if not txt.exists():
+                    continue  # txt not written yet; pick up next poll
+                seen.add(wav.name)
+                snippet = txt.read_text(encoding="utf-8")[:120]
                 index = int(wav.stem.rsplit("_", 1)[-1])
                 yield {"type": "chunk", "index": index,
                        "snippet": snippet, "wav_name": wav.name}

@@ -150,7 +150,7 @@ function initSSE(slug, runId, projectName) {
     htmx.process(deleteForm);
   });
 
-  es.onerror = () => { es.close(); delete _activeSSEs[runId]; };
+  es.onerror = () => {};
 }
 
 function toggleRun(runId, event) {
@@ -360,7 +360,8 @@ document.addEventListener('change', (e) => {
 });
 
 // Close live SSE stream before HTMX replaces the page content
-document.addEventListener('htmx:beforeSwap', () => {
+document.addEventListener('htmx:beforeSwap', (e) => {
+  if (e.detail.target?.id !== 'main') return;
   Object.values(_activeSSEs).forEach(es => es.close());
   _activeSSEs = {};
   _autoqueueRunId = null;

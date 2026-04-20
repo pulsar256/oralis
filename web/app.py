@@ -269,7 +269,10 @@ async def run_stream(slug: str, run_id: str):
     if not project or not run:
         raise HTTPException(404)
     run_dir = store.PROJECTS_DIR / slug / "runs" / run_id
-    seen_names = {c["wav_name"] for c in store.get_chunks(slug, run_id)}
+    if run.status.get("state") in ("done", "failed", "stopped"):
+        seen_names: set[str] = set()
+    else:
+        seen_names = {c["wav_name"] for c in store.get_chunks(slug, run_id)}
 
     async def generate():
         nonlocal seen_names
