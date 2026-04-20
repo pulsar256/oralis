@@ -47,8 +47,17 @@
     if (!playBtn) return;
     const hasItems = queue.length > 0;
     playBtn.disabled = !hasItems;
-    prevBtn.disabled = !hasItems;
-    nextBtn.disabled = !hasItems;
+    
+    if (!hasItems) {
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+    } else {
+      // Disable Prev only if we are on the first track and at the very beginning (within 3s restart window)
+      // because there's no previous track to skip to and restarting is basically what's already happening.
+      prevBtn.disabled = (currentIndex === 0 && audio.currentTime <= 3);
+      // Disable Next if we are on the last track
+      nextBtn.disabled = (currentIndex === queue.length - 1);
+    }
   }
 
   function init() {
@@ -192,6 +201,7 @@
         if (queue[currentIndex]?.url === url) _showWaveform(url);
       });
     }
+    _updateControlState();
   }
 
   function togglePlay() {
@@ -228,12 +238,14 @@
     } else {
       scrubFill.style.width = pct + '%';
     }
+    _updateControlState();
   }
 
   function onScrubClick(e) {
     if (!audio.duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
     audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+    _updateControlState();
   }
 
   function clearQueue() {
